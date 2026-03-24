@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  minio:
+    image: minio/minio
+    container_name: minio
+    restart: unless-stopped
+    environment:
+      MINIO_ENDPOINT: minio
+      MINIO_ROOT_USER: Vladislav
+      MINIO_ROOT_PASSWORD: 12345678
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  maildev:
+    image: maildev/maildev
+    container_name: maildev_con
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 123456
+      MONGO_INITDB_DATABASE: WebIllustrator
+    command: ["--bind_ip_all"]
+    volumes:
+      - mongo_data:/data/db
+
+  server:
+    build:
+      context: .
+      dockerfile: ./Docker/ServerDocker/DockerFile
+    container_name: webill_server
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./Server/.env
+    depends_on:
+      - mongodb
+    volumes:
+      - ./Server:/usr/src/app
+
+  client:
+    build:
+      context: .
+      dockerfile: ./Docker/ClientDocker/DockerFile
+    container_name: webill_client
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+
+volumes:
+  mongo_data:
+  minio_data:

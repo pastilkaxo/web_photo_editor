@@ -1,0 +1,91 @@
+$sidebar-width: 200px
+
+.app-sidebar
+    background: #111827
+    border-right: 1px solid rgba(255, 255, 255, 0.07)
+    color: #fff
+    display: flex
+    align-items: center
+    justify-content: flex-start // Top alignment
+    padding: 24px 12px // Added top padding
+    box-sizing: border-box
+    height: 100vh
+    flex-direction: column // Ensure vertical stacking
+
+    .nav
+        display: flex
+        flex-direction: column
+        gap: 20px
+        align-items: center
+        width: 100%
+
+/* Стили ссылок — сохраните ваши правила (.nav-link .aLink) */
+.nav-link
+    display: flex
+    align-items: center
+    justify-content: center
+    color: #fff
+    font-size: 26px
+    font-weight: 500
+    text-decoration: none
+    transition: color 0.3s ease
+
+.logoIcon
+    width: 50px
+    transition: transform 0.3s ease
+.logoIcon:hover
+    transform: scale(1.2)
+.homeIcon
+    width: 42px
+    transition: transform 0.3s ease
+.homeIcon:hover
+    transform: scale(1.2)
+.accountIcon
+    transition: transform 0.3s ease
+.accountIcon:hover
+    transform: scale(1.2)
+
+.aLink:hover
+    cursor: pointer
+    color: #f1f1f1
+.aLink:active
+    color: #fff
+    background-color: #4f46e5
+
+.burgerIcon
+    display: none
+
+/* Мобильная версия: horizontal topbar */
+@media (max-width: 768px)
+
+    .aLink-mobile
+        display: none
+
+    .burgerIcon
+        display: block
+        width: 60px
+
+    .app-sidebar
+        flex-direction: row
+        justify-content: space-between
+        padding: 8px 12px
+        -webkit-overflow-scrolling: touch
+        scrollbar-width: thin
+        scrollbar-color: #4f46e5 #111827
+
+        /* отменяем высоту и вертикальный скролл, делаем блок "авто" по высоте */
+        height: auto
+        max-height: none
+        overflow: visible
+
+        .nav
+            flex-direction: row
+            gap: 12px
+            width: 100%
+            justify-content: space-around
+
+            /* если элементов больше, разрешаем горизонтальную прокрутку вместо вертикальной */
+            flex-wrap: nowrap
+            overflow-x: auto
+            overflow-y: hidden
+            -webkit-overflow-scrolling: touch

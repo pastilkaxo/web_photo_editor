@@ -1,0 +1,196 @@
+
+.main-container
+    scroll-behavior: smooth
+    min-width: 0
+
+.section
+    min-height: 100vh
+    display: flex
+    flex-direction: column
+    justify-content: flex-start // Change from center to flex-start
+    align-items: center
+    padding: 0 20px
+    box-sizing: border-box
+    position: relative
+
+/* ─── Hero Section ─── */
+#section1
+    gap: clamp(16px, 3vw, 32px)
+    background: #0d1117
+    padding: 0 clamp(16px, 4vw, 48px) 40px !important // Force zero top padding
+    flex-direction: column
+    justify-content: flex-start !important // Force top alignment
+    min-height: 100vh
+    overflow: hidden
+    &::before
+        content: ""
+        position: absolute
+        inset: 0
+        background: radial-gradient(ellipse 60% 50% at 70% 30%, rgba(139, 92, 246, 0.08) 0%, transparent 70%), radial-gradient(ellipse 40% 40% at 20% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 60%)
+        pointer-events: none
+        z-index: 0
+    & > *
+        position: relative
+        z-index: 1
+
+/* ─── Floating orb decorations (subtle monotone version) ─── */
+.hero-orb
+    position: absolute
+    border-radius: 50%
+    filter: blur(80px)
+    pointer-events: none
+    z-index: 0
+    animation: orbFloat 10s ease-in-out infinite
+
+.hero-orb--violet
+    width: 400px
+    height: 400px
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.07) 0%, transparent 75%)
+    top: -100px
+    right: -80px
+    animation-delay: 0s
+
+.hero-orb--blue
+    width: 300px
+    height: 300px
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 75%)
+    bottom: 40px
+    left: -60px
+    animation-delay: 3s
+
+/* ─── Feature cards grid ─── */
+.features-grid
+    display: grid
+    grid-template-columns: repeat(2, 1fr)
+    gap: 16px
+    width: 100%
+
+.feature-card
+    display: flex
+    flex-direction: column
+    gap: 8px
+    padding: 20px
+    border-radius: 16px
+    height: 100%
+    box-sizing: border-box
+    background: rgba(255, 255, 255, 0.03)
+    border: 1px solid rgba(255, 255, 255, 0.08)
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+    cursor: default
+    &:hover
+        background: rgba(255, 255, 255, 0.06)
+        border-color: rgba(139, 92, 246, 0.3)
+        transform: translateY(-4px)
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3)
+
+.feature-icon
+    font-size: 26px
+    margin-bottom: 4px
+
+/* ─── Top Projects styling ─── */
+.project-preview-img
+    width: 100%
+    border-radius: 14px
+    object-fit: cover
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5)
+    transition: transform 0.4s ease, box-shadow 0.4s ease
+    &:hover
+        transform: scale(1.02)
+        box-shadow: 0 20px 60px rgba(79, 70, 229, 0.25)
+
+.stat-badge
+    display: inline-flex
+    align-items: center
+    gap: 6px
+    padding: 6px 16px
+    border-radius: 999px
+    background: rgba(255, 255, 255, 0.06)
+    border: 1px solid rgba(255, 255, 255, 0.12)
+    font-size: 13px
+    color: rgba(255, 255, 255, 0.9)
+    font-weight: 500
+
+/* ─── Hero tag chips ─── */
+.hero-tag
+    display: inline-flex
+    align-items: center
+    gap: 6px
+    padding: 6px 18px
+    border-radius: 999px
+    font-size: 13px
+    font-weight: 600
+    letter-spacing: 0.01em
+    border: 1px solid transparent
+    backdrop-filter: blur(10px)
+
+.hero-tag--violet
+    background: rgba(139, 92, 246, 0.12)
+    border-color: rgba(139, 92, 246, 0.3)
+    color: #c4b5fd
+
+.hero-tag--blue
+    background: rgba(59, 130, 246, 0.1)
+    border-color: rgba(59, 130, 246, 0.25)
+    color: #93c5fd
+
+.hero-tag--teal
+    background: rgba(20, 184, 166, 0.1)
+    border-color: rgba(20, 184, 166, 0.25)
+    color: #5eead4
+
+.hero-tag--amber
+    background: rgba(245, 158, 11, 0.08)
+    border-color: rgba(245, 158, 11, 0.25)
+    color: #fcd34d
+
+/* ─── Animations ─── */
+@keyframes orbFloat
+    0%, 100%
+        transform: translate(0, 0) scale(1)
+    50%
+        transform: translate(-30px, 20px) scale(1.05)
+
+@keyframes fadeSlideUp
+    from
+        opacity: 0
+        transform: translateY(30px)
+    to
+        opacity: 1
+        transform: translateY(0)
+
+.animate-fade-up
+    animation: fadeSlideUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both
+
+.animate-fade-up-delay-1
+    animation: fadeSlideUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both
+
+.animate-fade-up-delay-2
+    animation: fadeSlideUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both
+
+.animate-fade-up-delay-3
+    animation: fadeSlideUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s both
+
+/* ─── Responsive ─── */
+@media (max-width: 768px)
+    #section1
+        padding: 32px 24px
+        justify-content: flex-start
+
+    .features-grid
+        grid-template-columns: 1fr
+
+@media (max-width: 480px)
+    #section1
+        padding: 24px 16px
+
+// Общие стили для других секций
+#section2, #section3, #section4
+    padding: 20px
+    text-align: center
+
+    h1
+        font-size: clamp(24px, 5vw, 36px)
+
+    p
+        font-size: clamp(16px, 4vw, 20px)

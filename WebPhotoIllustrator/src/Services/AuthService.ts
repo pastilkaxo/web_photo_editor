@@ -1,0 +1,21 @@
+import $api from "../http";
+import { AxiosResponse } from 'axios';
+import {IAuthResponse} from "../models/response/AuthResponse";
+
+export default class AuthService {
+    static async login(email: string, password: string): Promise<AxiosResponse<IAuthResponse>> {
+        return $api.post('/login',{email,password});
+    }
+
+    static async register(email: string, password: string): Promise<AxiosResponse<IAuthResponse>> {
+        return $api.post('/register',{email,password});
+    }
+
+    static async logout(): Promise<void> {
+        return $api.post('/logout');
+    }
+
+    static async googleAuth(credential: string): Promise<AxiosResponse<IAuthResponse>> {
+        return $api.post('/auth/google', { credential });
+    }
+}

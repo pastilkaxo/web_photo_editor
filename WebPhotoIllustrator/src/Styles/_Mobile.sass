@@ -1,0 +1,50 @@
+@media (max-width: 767.98px)
+    .wrapper
+        flex-direction: column !important
+        height: 100vh !important
+    .bg-success
+        min-height: 60px !important
+        height: 60px !important
+        width: 100vw !important
+        max-width: 100vw !important
+        flex-direction: row !important
+        align-items: center !important
+        justify-content: space-between !important
+
+    .nav
+        flex-direction: row !important
+        width: 100% !important
+        gap: 10px
+        align-items: center !important
+        margin-bottom: 0 !important
+    .homeIcon
+        width: 32px
+
+    .accountIcon
+        width: 40px
+        margin-left: auto
+    .main-menu
+        & .nav-item
+            display: none
+        & .menu-togler
+            display: block
+
+@media (min-width: 768px)
+    .main-menu
+        & .nav-item
+            display: block
+        & .menu-togler
+            display: none
+    .bg-success
+        width: 120px !important
+        min-width: 120px !important
+        max-width: 120px !important
+        min-height: 100vh !important
+        height: 100vh !important
+        flex-direction: column !important
+        align-items: center !important
+
+    .nav
+        flex-direction: column !important
+        width: 100%
+        margin-bottom: auto

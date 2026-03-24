@@ -1,0 +1,12 @@
+FROM node:24-alpine
+
+WORKDIR /usr/src/app
+
+COPY ../Server/package*.json ./
+RUN npm install
+
+COPY ../Server .
+
+EXPOSE 5000
+
+CMD ["npm", "run", "dev"]
