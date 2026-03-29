@@ -77,10 +77,15 @@ const AdminProjectsView: React.FC = () => {
             width: 120,
             renderCell: (params: GridRenderCellParams) => (
                 <Chip
-                    label={params.value === "PUBLIC" ? "Публичный" : "Приватный"}
+                    label={params.value === "PUBLIC" ? "PUBLIC" : "PRIVATE"}
                     color={params.value === "PUBLIC" ? "success" : "default"}
                     size="small"
                     variant="outlined"
+                    sx={{ 
+                        fontWeight: 800, 
+                        fontSize: "0.75rem", 
+                        letterSpacing: "0.03em"
+                    }}  
                 />
             )
         },
@@ -147,60 +152,64 @@ const AdminProjectsView: React.FC = () => {
                             quickFilterProps: { debounceMs: 500 },
                         },
                     }}
-                    sx={{
-                      border: "none",
-                      color: "#fff",
-                      "& .MuiDataGrid-cell": {
-                          color: "rgba(255, 255, 255, 0.9)",
-                          fontSize: "0.85rem",
-                          borderBottom: "1px solid rgba(255,255,255,0.05)",
-                          display: 'flex',
-                          alignItems: 'center'
-                      },
-                      "& .MuiDataGrid-columnHeader": {
-                          backgroundColor: "rgba(255,255,255,0.05)",
-                          color: "#fff",
-                      },
-                      "& .MuiDataGrid-columnHeaderTitle": {
-                          fontWeight: 800,
-                          fontSize: "0.9rem",
-                          color: "#fff"
-                      },
-                      "& .MuiDataGrid-iconSeparator": {
-                          display: "none"
-                      },
-                      "& .MuiDataGrid-columnHeaders": {
-                          borderBottom: "1px solid rgba(255,255,255,0.12)",
-                      },
-                      "& .MuiDataGrid-footerContainer": {
-                          borderTop: "1px solid rgba(255,255,255,0.12)",
-                          color: "#fff"
-                      },
-                      "& .MuiTablePagination-root": {
-                          color: "rgba(255, 255, 255, 0.7)"
-                      },
-                      "& .MuiDataGrid-toolbarContainer": {
-                          padding: 1.5,
-                          borderBottom: "1px solid rgba(255,255,255,0.08)",
-                          "& .MuiButton-root": { color: "#a78bfa", fontWeight: 700 },
-                          "& .MuiInputBase-root": { 
-                              color: "#fff",
-                              bgcolor: "rgba(255,255,255,0.04)", 
-                              borderRadius: 2,
-                              px: 1,
-                              "& .MuiSvgIcon-root": { color: "rgba(255,255,255,0.5)" }
-                          }
-                      },
-                      "& .MuiDataGrid-sortIcon": {
-                          color: "#fff"
-                      },
-                      "& .MuiDataGrid-menuIcon": {
-                          color: "#fff"
-                      },
-                      "& .MuiCheckbox-root": {
-                          color: "rgba(255,255,255,0.3)"
-                      }
-                    }}
+                sx={{
+                border: "none",
+                bgcolor: "#fff", // Фон самой таблицы
+                color: "#000", // Основной цвет текста
+                "& .MuiDataGrid-cell": {
+                    color: "#000",
+                    fontSize: "0.85rem",
+                    borderBottom: "1px solid rgba(0,0,0,0.08)",
+                    display: 'flex',
+                    alignItems: 'center'
+                },
+                "& .MuiDataGrid-columnHeader": {
+                    backgroundColor: "#f1f5f9", // Светлая подложка для шапки
+                    color: "#000",
+                },
+                "& .MuiDataGrid-columnHeaderTitle": {
+                    fontWeight: 800,
+                    fontSize: "0.9rem",
+                    color: "#000"
+                },
+                "& .MuiDataGrid-iconSeparator": {
+                    display: "none"
+                },
+                "& .MuiDataGrid-columnHeaders": {
+                    borderBottom: "2px solid rgba(0,0,0,0.1)",
+                },
+                "& .MuiDataGrid-footerContainer": {
+                    borderTop: "1px solid rgba(0,0,0,0.1)",
+                    bgcolor: "#fff",
+                    color: "#000"
+                },
+                "& .MuiTablePagination-root": {
+                    color: "#000"
+                },
+                "& .MuiDataGrid-toolbarContainer": {
+                    padding: 1.5,
+                    bgcolor: "#fff",
+                    borderBottom: "1px solid rgba(0,0,0,0.08)",
+                    "& .MuiButton-root": { color: "#6d28d9", fontWeight: 700 }, // Более темный фиолетовый для контраста
+                    "& .MuiInputBase-root": { 
+                        color: "#000",
+                        bgcolor: "#f8fafc", 
+                        borderRadius: 2,
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        px: 1,
+                        "& .MuiSvgIcon-root": { color: "rgba(0,0,0,0.5)" }
+                    }
+                },
+                "& .MuiDataGrid-sortIcon": {
+                    color: "#000"
+                },
+                "& .MuiDataGrid-menuIcon": {
+                    color: "#000"
+                },
+                "& .MuiCheckbox-root": {
+                    color: "rgba(0,0,0,0.4)"
+                }
+                }}
                 />
             </Box>
         </Box>
