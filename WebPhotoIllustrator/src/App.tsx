@@ -11,6 +11,7 @@ import {
 import NotFound from "./Components/ErrorAlerts/NotFound";
 import Header from "./Components/Header/Header";
 import Profile from "./Components/Main/Account/AccountPage/Profile";
+import PublicAuthorProfile from "./Components/Main/Account/AccountPage/PublicAuthorProfile";
 import ProjectsView from "./Components/Main/Account/AccountPage/ProjectsView";
 import ResetForm from "./Components/Main/AuthForm/ResetForm";
 import CanvasApp from "./Components/Main/Fabric/CanvasApp";
@@ -56,6 +57,7 @@ function App() {
               <Route path="/projects" element={store.isAuth ? <ProjectsView standalone /> : <Main />} />
               <Route path="/editor" element={<CanvasApp />} />
               <Route path="/editor/:id" element={store.isAuth ? <CanvasApp /> : <Main />} />
+              <Route path="/profile/:userId" element={<PublicAuthorProfile />} />
               <Route path="/profile" element={store.isAuth ? <Profile /> : <Main />} />
               <Route path="/password/reset" element={store.wantToResetPassword && !store.isAuth ? <ResetForm /> : <NotFound />} />
               <Route path='*' element={<NotFound />} />

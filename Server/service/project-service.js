@@ -142,6 +142,7 @@ class ProjectService {
             limit = 12,
             search = "",
             category,
+            owner,
             sortBy = "createdAt",
             sortOrder = "desc"
         } = filters;
@@ -156,6 +157,9 @@ class ProjectService {
         }
         if (category && category !== "ALL") {
             query.category = category;
+        }
+        if (owner && mongoose.Types.ObjectId.isValid(owner)) {
+            query.owner = owner;
         }
 
         const allowedSortFields = ["createdAt", "updatedAt", "stars", "name"];

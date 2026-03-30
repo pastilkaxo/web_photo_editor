@@ -8,6 +8,7 @@ const tokenService = require("../service/token-service.js");
 const UserDto = require("../dtos/user-dto")
 const ApiError = require("../Exceptions/api-error");
 const { OAuth2Client } = require("google-auth-library");
+const mongoose = require("mongoose");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -171,6 +172,24 @@ class UserService {
             throw ApiError.BadRequest("Пользователь не найден!");
         }
         return user;
+    }
+
+    async getPublicProfile(userId) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw ApiError.BadRequest("Некорректный ID пользователя");
+        }
+        const user = await UserModel.findById(userId).select("firstName lastName totalStars isBlocked");
+        if (!user || user.isBlocked) {
+            throw ApiError.BadRequest("Пользователь не найден");
+        }
+        const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || "Пользователь";
+        return {
+            id: user._id.toString(),
+            firstName: user.firstName || "",
+            lastName: user.lastName || "",
+            displayName,
+            totalStars: user.totalStars || 0,
+        };
     }
 
     async googleAuth(credential) {

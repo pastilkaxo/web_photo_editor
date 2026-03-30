@@ -32,6 +32,7 @@ import {
   FolderOpenRounded,
   LogoutRounded,
 } from "@mui/icons-material";
+import { AuthorNameLink } from "../AuthorNameLink";
 import { IProject } from "../../models/IProject";
 import ProjectService from "../../Services/ProjectService";
 
@@ -458,9 +459,13 @@ function Main() {
                     <Typography variant="h4" fontWeight={900} sx={{ lineHeight: 1.2, mb: 1 }}>
                       {activeTopProject.name || "Без названия"}
                     </Typography>
-                    <Typography variant="body1" sx={mutedText}>
-                      Автор: <strong style={{ color: "#fff" }}>{activeTopProject.ownerName || "Неизвестный"}</strong>
-                    </Typography>
+                    <AuthorNameLink
+                      ownerId={activeTopProject.owner}
+                      ownerName={activeTopProject.ownerName || "Неизвестный"}
+                      variant="body1"
+                      mutedSx={mutedText}
+                      nameSx={{ color: "#fff", fontWeight: 700 }}
+                    />
                   </Box>
 
                   {/* Stats */}

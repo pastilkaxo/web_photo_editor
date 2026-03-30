@@ -52,30 +52,9 @@ import {
   wheelZoomAtPointer,
   isEventTargetOnFabricCanvas,
 } from "./canvasViewportUtils";
+import { SERIALIZATION_PROPS, extendObjectWithCustomProps } from "./fabricSerialization";
 
-export const SERIALIZATION_PROPS = [
-  "id",
-  "styleID",
-  "zIndex",
-  "name",
-  "selectable",
-  "evented",
-  "lockMovementX",
-  "lockMovementY",
-  "lockRotation",
-  "lockScalingX",
-  "lockScalingY",
-  "src",     
-  "filters",   
-  "clipPath",  
-  "text",       
-  "fontSize",
-  "fontFamily",
-  "fill",
-  "stroke",
-  "strokeWidth",
-  "backgroundColor"
-];
+export { SERIALIZATION_PROPS };
 
 const DEFAULT_NEW_CANVAS_WIDTH = 800;
 const DEFAULT_NEW_CANVAS_HEIGHT = 600;
@@ -246,20 +225,6 @@ function CanvasApp() {
           canvas.requestRenderAll();
       }
   }, [isReadOnly, canvas]);
-
-  const extendObjectWithCustomProps = (object) => {
-    object.styleID = object.styleID || null;
-    object.zIndex = object.zIndex || 0;
-    object.id = object.id || `obj-${Date.now()}`;
-
-    const originalToObject = object.toObject;
-
-    object.toObject = function (propertiesToInclude = []) {
-      const allProps = [...new Set([...propertiesToInclude, ...SERIALIZATION_PROPS])];
-      return originalToObject.call(this, allProps);
-    };
-  };
-
 
 const groupSelectedObjects = () => {
   if (canvas) {

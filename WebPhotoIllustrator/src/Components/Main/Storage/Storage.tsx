@@ -1,25 +1,34 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import SendIcon from "@mui/icons-material/Send";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import {
     Box, Grid, Card, CardMedia, CardContent, Typography, CardActionArea,
     Dialog, DialogContent, CircularProgress, Alert, Rating, Stack
     , IconButton, TextField, List, ListItem, ListItemText, Divider, Pagination,
-    FormControl, InputLabel, Select, MenuItem, SelectChangeEvent
+    FormControl, InputLabel, Select, MenuItem, SelectChangeEvent, Button, Tooltip
 } from "@mui/material";
 import { observer } from "mobx-react-lite";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { Link, useNavigate } from "react-router-dom";
 import { Context } from "../../..";
 import { IComment } from "../../../models/IComment";
 import { IProject } from "../../../models/IProject";
+import { AuthorNameLink } from "../../AuthorNameLink";
 import ProjectService from "../../../Services/ProjectService";
 import { PROJECT_CATEGORIES, PROJECT_CATEGORY_LABELS, ProjectCategory } from "../../../constants/projectCategories";
+import { buildFabricProjectPayloadFromImageFile } from "../../../utils/buildFabricProjectFromImage";
+
+const MAX_GALLERY_PHOTO_BYTES = 25 * 1024 * 1024;
 
 const Storage: React.FC = () => {
     const { store } = useContext(Context);
+    const navigate = useNavigate();
+    const galleryPhotoInputRef = useRef<HTMLInputElement>(null);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [projects, setProjects] = useState<IProject[]>([]);
     const [comments, setComments] = useState<IComment[]>([]);
     const [newComment, setNewComment] = useState<string>("");
@@ -159,6 +168,41 @@ const Storage: React.FC = () => {
         }
     };
 
+    const handleGalleryPhotoSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file) return;
+        if (!store.isAuth) {
+            alert("Войдите в аккаунт, чтобы загрузить фото.");
+            return;
+        }
+        if (file.size > MAX_GALLERY_PHOTO_BYTES) {
+            alert("Файл слишком большой. Максимум 25 МБ.");
+            return;
+        }
+        setUploadingPhoto(true);
+        try {
+            const { json, previewImage, suggestedName } = await buildFabricProjectPayloadFromImageFile(file);
+            const response = await ProjectService.createProject(
+                suggestedName,
+                json,
+                "PUBLIC",
+                previewImage,
+                "OTHER"
+            );
+            await fetchPublicProjects();
+            navigate(`/editor/${response.data._id}`);
+        } catch (e: any) {
+            const msg =
+                e?.message ||
+                e?.response?.data?.message ||
+                "Не удалось загрузить фото. Попробуйте другой файл.";
+            alert(msg);
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
 
     if (error) {
         return <Box mt={2}><Alert severity="error">{error}</Alert></Box>;
@@ -175,9 +219,54 @@ const Storage: React.FC = () => {
                 backdropFilter: "blur(20px)",
                 border: "1px solid rgba(255, 255, 255, 0.08)"
             }}>
-                <Typography variant="h4" gutterBottom component="div" sx={{ mb: 4, textAlign: "center", fontWeight: 900, color: "white", letterSpacing: "-0.01em" }}>
-                    Публичная галерея
-                </Typography>
+                <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={2}
+                    alignItems="center"
+                    justifyContent="center"
+                    sx={{ mb: 4 }}
+                >
+                    <Typography variant="h4" component="div" sx={{ textAlign: "center", fontWeight: 900, color: "white", letterSpacing: "-0.01em" }}>
+                        Публичная галерея
+                    </Typography>
+                    {store.isAuth ? (
+                        <>
+                            <input
+                                ref={galleryPhotoInputRef}
+                                type="file"
+                                accept="image/*"
+                                hidden
+                                onChange={handleGalleryPhotoSelected}
+                            />
+                            <Button
+                                variant="contained"
+                                startIcon={<PhotoCameraOutlinedIcon />}
+                                disabled={uploadingPhoto}
+                                onClick={() => galleryPhotoInputRef.current?.click()}
+                                sx={{
+                                    borderRadius: 3,
+                                    textTransform: "none",
+                                    fontWeight: 700,
+                                    background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
+                                    boxShadow: "0 8px 24px rgba(79, 70, 229, 0.35)",
+                                    "&:hover": {
+                                        background: "linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)",
+                                    },
+                                }}
+                            >
+                                {uploadingPhoto ? "Загрузка…" : "Загрузить фото"}
+                            </Button>
+                        </>
+                    ) : (
+                        <Tooltip title="Войдите, чтобы добавить работу в галерею">
+                            <span>
+                                <Button variant="outlined" disabled sx={{ borderRadius: 3, textTransform: "none", borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.4)" }}>
+                                    Загрузить фото
+                                </Button>
+                            </span>
+                        </Tooltip>
+                    )}
+                </Stack>
                 <Stack spacing={2} sx={{ mb: 4 }}>
                     <TextField
                         fullWidth
@@ -351,9 +440,32 @@ const Storage: React.FC = () => {
                                     <Box sx={{ p: 3, flexGrow: 1, display: "flex", flexDirection: "column", maxHeight: "100%" }}>
                                         <Box sx={{ mb: 3 }}>
                                             <Typography variant="h6" sx={{ color: "#fff", fontWeight: 800, mb: 0.5 }}>{selectedProject.name || "Без названия"}</Typography>
-                                            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)" }}>
-                                                Автор: <span style={{ color: "#a78bfa" }}>{selectedProject.ownerName || "Аноним"}</span>
-                                            </Typography>
+                                            <AuthorNameLink
+                                                ownerId={selectedProject.owner}
+                                                ownerName={selectedProject.ownerName || "Аноним"}
+                                            />
+                                            {store.isAuth ? (
+                                                <Button
+                                                    fullWidth
+                                                    variant="contained"
+                                                    component={Link}
+                                                    to={`/editor/${selectedProject._id}`}
+                                                    onClick={handleClosePreview}
+                                                    sx={{
+                                                        mt: 2,
+                                                        borderRadius: 2,
+                                                        textTransform: "none",
+                                                        fontWeight: 700,
+                                                        background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
+                                                    }}
+                                                >
+                                                    Открыть в редакторе
+                                                </Button>
+                                            ) : (
+                                                <Typography variant="caption" sx={{ display: "block", mt: 2, color: "rgba(255,255,255,0.45)" }}>
+                                                    Войдите, чтобы открыть проект в редакторе.
+                                                </Typography>
+                                            )}
                                         </Box>
 
                                         <Divider sx={{ mb: 2, borderColor: "rgba(255,255,255,0.08)" }} />

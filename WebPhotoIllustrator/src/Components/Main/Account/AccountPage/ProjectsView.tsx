@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useRef } from "react";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import ShareIcon from "@mui/icons-material/Share";
@@ -6,6 +6,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ForumIcon from "@mui/icons-material/Forum";
 import SendIcon from "@mui/icons-material/Send";
 import EditIcon from "@mui/icons-material/Edit";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -41,8 +42,12 @@ import { GearIcon } from "sebikostudio-icons"
 import { Context } from "../../../../index";
 import { IProject } from "../../../../models/IProject";
 import { IComment } from "../../../../models/IComment";
+import { AuthorNameLink } from "../../../AuthorNameLink";
 import ProjectService from "../../../../Services/ProjectService";
 import { PROJECT_CATEGORIES, PROJECT_CATEGORY_LABELS, ProjectCategory } from "../../../../constants/projectCategories";
+import { buildFabricProjectPayloadFromImageFile } from "../../../../utils/buildFabricProjectFromImage";
+
+const MAX_PROJECT_PHOTO_BYTES = 25 * 1024 * 1024;
 
 interface ProjectsViewProps {
   standalone?: boolean;
@@ -52,6 +57,8 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
   const { store } = useContext(Context);
   const [projects, setProjects] = useState<IProject[]>([]);
   const navigate = useNavigate();
+  const projectPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Pagination
@@ -215,6 +222,41 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleProjectPhotoSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!store.isAuth) {
+      alert("Войдите в аккаунт, чтобы загрузить фото.");
+      return;
+    }
+    if (file.size > MAX_PROJECT_PHOTO_BYTES) {
+      alert("Файл слишком большой. Максимум 25 МБ.");
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const { json, previewImage, suggestedName } = await buildFabricProjectPayloadFromImageFile(file);
+      const response = await ProjectService.createProject(
+        suggestedName,
+        json,
+        "PRIVATE",
+        previewImage,
+        "OTHER"
+      );
+      await fetchProjects();
+      navigate(`/editor/${response.data._id}`);
+    } catch (e: any) {
+      const msg =
+        e?.message ||
+        e?.response?.data?.message ||
+        "Не удалось загрузить фото. Попробуйте другой файл.";
+      alert(msg);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const paginatedProjects = projects.slice((page - 1) * projectsPerPage, page * projectsPerPage);
   const totalPages = Math.ceil(projects.length / projectsPerPage);
 
@@ -242,7 +284,39 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
               Управляйте своими работами, контролируйте приватность и делитесь результатом.
             </Typography>
           </Box>
-          <Chip label={`Всего: ${projects.length}`} sx={{ fontWeight: 700, bgcolor: "rgba(167, 139, 250, 0.15)", color: "#c4b5fd", border: "1px solid rgba(167, 139, 250, 0.3)" }} />
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "stretch", sm: "center" }}>
+            <Chip label={`Всего: ${projects.length}`} sx={{ fontWeight: 700, bgcolor: "rgba(167, 139, 250, 0.15)", color: "#c4b5fd", border: "1px solid rgba(167, 139, 250, 0.3)", alignSelf: { xs: "flex-start", sm: "center" } }} />
+            {store.isAuth ? (
+              <>
+                <input
+                  ref={projectPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleProjectPhotoSelected}
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<PhotoCameraOutlinedIcon />}
+                  disabled={uploadingPhoto}
+                  onClick={() => projectPhotoInputRef.current?.click()}
+                  sx={{
+                    borderRadius: 3,
+                    textTransform: "none",
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                    background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
+                    boxShadow: "0 8px 24px rgba(79, 70, 229, 0.35)",
+                    "&:hover": {
+                      background: "linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)",
+                    },
+                  }}
+                >
+                  {uploadingPhoto ? "Загрузка…" : "Загрузить фото"}
+                </Button>
+              </>
+            ) : null}
+          </Stack>
         </Box>
 
         {loading ? (
@@ -251,7 +325,7 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
           </Box>
         ) : projects.length === 0 ? (
           <Typography sx={{ py: 8, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
-            У вас пока нет проектов. Создайте новый в редакторе!
+            У вас пока нет проектов. Создайте новый в редакторе или нажмите «Загрузить фото» выше.
           </Typography>
         ) : (
           <>
@@ -500,9 +574,10 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
                 <Box sx={{ p: 3, flexGrow: 1, display: "flex", flexDirection: "column", maxHeight: "100%" }}>
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" sx={{ color: "#fff", fontWeight: 800, mb: 0.5 }}>{selectedProject.name || "Без названия"}</Typography>
-                    <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)" }}>
-                      Автор: <span style={{ color: "#a78bfa" }}>{selectedProject.ownerName || "Аноним"}</span>
-                    </Typography>
+                    <AuthorNameLink
+                      ownerId={selectedProject.owner}
+                      ownerName={selectedProject.ownerName || "Аноним"}
+                    />
                   </Box>
 
                   <Divider sx={{ mb: 2, borderColor: "rgba(255,255,255,0.08)" }} />

@@ -11,6 +11,7 @@ export interface IPublicProjectsQuery {
     limit?: number;
     search?: string;
     category?: "ALL" | ProjectCategory;
+    owner?: string;
     sortBy?: "createdAt" | "updatedAt" | "stars" | "name";
     sortOrder?: "asc" | "desc";
 }

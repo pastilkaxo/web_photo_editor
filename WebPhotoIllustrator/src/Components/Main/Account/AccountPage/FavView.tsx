@@ -15,6 +15,7 @@ import { observer } from "mobx-react-lite";
 import { Context } from "../../../..";
 import { IComment } from "../../../../models/IComment";
 import { IProject } from "../../../../models/IProject";
+import { AuthorNameLink } from "../../../AuthorNameLink";
 import ProjectService from "../../../../Services/ProjectService";
 
 const FavView: React.FC = () => {
@@ -251,9 +252,10 @@ const FavView: React.FC = () => {
                                 <Box sx={{ p: 3, flexGrow: 1, display: "flex", flexDirection: "column", maxHeight: "100%" }}>
                                     <Box sx={{ mb: 3 }}>
                                         <Typography variant="h6" sx={{ color: "#fff", fontWeight: 800, mb: 0.5 }}>{selectedProject.name || "Без названия"}</Typography>
-                                        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)" }}>
-                                            Автор: <span style={{ color: "#a78bfa" }}>{selectedProject.ownerName || "Аноним"}</span>
-                                        </Typography>
+                                        <AuthorNameLink
+                                            ownerId={selectedProject.owner}
+                                            ownerName={selectedProject.ownerName || "Аноним"}
+                                        />
                                     </Box>
 
                                     <Divider sx={{ mb: 2, borderColor: "rgba(255,255,255,0.08)" }} />

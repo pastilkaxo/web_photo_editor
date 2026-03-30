@@ -23,6 +23,7 @@ router.post("/generate-image", gptController.generateImage);
 router.get('/activate/:link',tokenController.activate);
 router.get('/refresh', tokenController.refresh);
 router.put('/update-myself', authMiddleware, userController.updateMySelf);
+router.get('/users/:userId/public', userController.getPublicProfile);
 
 router.get('/admin/users',authMiddleware, roleMiddleware(['ADMIN']), userController.getUsers);
 router.put('/admin/user/update', authMiddleware, roleMiddleware(['ADMIN']), userController.updateUser);

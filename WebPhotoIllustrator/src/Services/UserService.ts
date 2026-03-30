@@ -2,9 +2,14 @@
 import $api from "../http";
 import { AxiosResponse } from 'axios';
 import { IUser } from "../models/IUser";
+import { IPublicUserProfile } from "../models/IPublicUserProfile";
 import { IPassResponse } from "../models/response/PasswordResponse";
 
 export default class UserService {
+    static async getPublicProfile(userId: string): Promise<AxiosResponse<IPublicUserProfile>> {
+        return $api.get<IPublicUserProfile>(`/users/${userId}/public`);
+    }
+
     static async fetchUsers(): Promise<AxiosResponse<IUser[]>> {
         return $api.get<IUser[]>('/admin/users');
     }

@@ -100,6 +100,16 @@ class UserController {
         }
     }
 
+    async getPublicProfile(req, res, next) {
+        try {
+            const { userId } = req.params;
+            const profile = await userService.getPublicProfile(userId);
+            return res.json(profile);
+        } catch (err) {
+            next(err);
+        }
+    }
+
 }
 
 module.exports = new UserController();
