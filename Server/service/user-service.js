@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt")
 const { v4: uuidv4 } = require('uuid');
 const mailService = require("../service/mail-service.js");
 const tokenService = require("../service/token-service.js");
+const projectService = require("../service/project-service.js");
 const UserDto = require("../dtos/user-dto")
 const ApiError = require("../Exceptions/api-error");
 const { OAuth2Client } = require("google-auth-library");
@@ -142,6 +143,7 @@ class UserService {
         }
         user.isBlocked = true;
         await user.save();
+        await projectService.deleteAllProjectsByOwner(userId.toString());
         return user;
     }
 

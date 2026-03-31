@@ -95,6 +95,15 @@ class ContestController {
       next(e);
     }
   }
+
+  async adminReports(req, res, next) {
+    try {
+      const data = await contestService.getReportsForAdmin();
+      return res.json(data);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 module.exports = new ContestController();

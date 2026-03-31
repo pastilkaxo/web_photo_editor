@@ -24,6 +24,31 @@ export interface IContestSpotlight {
     socialLink: string;
 }
 
+export interface IContestReportAdminRow {
+    _id: string;
+    reason: string;
+    createdAt: string;
+    project: {
+        _id: string;
+        name: string;
+        ownerName: string;
+        previewImage?: string;
+        owner: {
+            _id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            isBlocked?: boolean;
+        };
+    } | null;
+    reporter: {
+        _id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+    } | null;
+}
+
 export interface IHallWeek {
     weekIndex: number;
     theme: string;
@@ -66,6 +91,10 @@ export default class ContestService {
 
     static async reportProject(projectId: string, reason?: string): Promise<AxiosResponse<{ message: string }>> {
         return $api.post(`/contests/report/${projectId}`, { reason: reason || "" });
+    }
+
+    static async getAdminReports(): Promise<AxiosResponse<IContestReportAdminRow[]>> {
+        return $api.get<IContestReportAdminRow[]>("/contests/admin/reports");
     }
 
     static async toggleFollow(userId: string): Promise<AxiosResponse<{ following: boolean }>> {

@@ -1,5 +1,6 @@
 const Router = require("express");
 const authMiddleware = require("../middlewares/auth-middleware");
+const roleMiddleware = require("../middlewares/role-middleware");
 const contestController = require("../controllers/contest-controller");
 
 const router = new Router();
@@ -12,6 +13,12 @@ router.get("/entries", contestController.entries);
 router.post("/submit", authMiddleware, contestController.submit);
 router.post("/withdraw", authMiddleware, contestController.withdraw);
 router.post("/report/:projectId", authMiddleware, contestController.report);
+router.get(
+  "/admin/reports",
+  authMiddleware,
+  roleMiddleware(["ADMIN"]),
+  contestController.adminReports
+);
 router.post("/follow/:userId", authMiddleware, contestController.follow);
 router.get("/follow/:userId", authMiddleware, contestController.followStatus);
 

@@ -505,6 +505,23 @@ class ContestService {
     return viewer.following.some((id) => id.toString() === targetUserId);
   }
 
+  async getReportsForAdmin() {
+    const reports = await ContestReportModel.find()
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .populate({
+        path: "project",
+        select: "name owner ownerName previewImage visibility _id",
+        populate: {
+          path: "owner",
+          select: "firstName lastName email _id isBlocked",
+        },
+      })
+      .populate("reporter", "firstName lastName email _id")
+      .lean();
+    return reports;
+  }
+
   /** Ручной вызов (крон дублирует логику через rolloverIfNeeded) */
   async runMondayJob() {
     return rolloverIfNeeded();

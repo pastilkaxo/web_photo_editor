@@ -14,6 +14,7 @@ import ProfileView from "./ProfileView";
 import ProjectsView from "./ProjectsView";
 import SettingsView from "./SecurityView";
 import AdminProjectsView from "./AdminProjectsView";
+import AdminReportsView from "./AdminReportsView";
 import {Context} from "../../../../index";
 
 interface TabPanelProps {
@@ -103,6 +104,7 @@ function ProfileCard(){
           <Tab label="Безопасность" {...a11yProps(3)} sx={{ fontWeight: 700, px: 3, textTransform: "none", fontSize: "0.95rem" }} />
           {store.user.roles.includes("ADMIN") && <Tab label="Админ панель" {...a11yProps(4)} sx={{ fontWeight: 700, px: 3, textTransform: "none", fontSize: "0.95rem", color: "#fca5a5" }} />}
           {store.user.roles.includes("ADMIN") && <Tab label="Проекты (Админ)" {...a11yProps(5)} sx={{ fontWeight: 700, px: 3, textTransform: "none", fontSize: "0.95rem", color: "#fca5a5" }} />}
+          {store.user.roles.includes("ADMIN") && <Tab label="Жалобы" {...a11yProps(6)} sx={{ fontWeight: 700, px: 3, textTransform: "none", fontSize: "0.95rem", color: "#fca5a5" }} />}
         </Tabs>
       </AppBar>
       <Divider />
@@ -123,6 +125,9 @@ function ProfileCard(){
       </TabPanel>
       <TabPanel value={value} index={5}>
         {store.user.roles.includes("ADMIN") && <AdminProjectsView />}
+      </TabPanel>
+      <TabPanel value={value} index={6}>
+        {store.user.roles.includes("ADMIN") && <AdminReportsView />}
       </TabPanel>
     </Card>
   )

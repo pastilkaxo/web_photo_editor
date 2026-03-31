@@ -46,6 +46,7 @@ import { useAppDialog } from "../../../context/AppDialogContext";
 import NotFound from "../../ErrorAlerts/NotFound";
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
+import HomeRounded from "@mui/icons-material/HomeRounded";
 import Typography from '@mui/material/Typography';
 import { modalStyle } from "./styles";
 import {
@@ -958,6 +959,17 @@ const groupSelectedObjects = () => {
       return <NotFound />;
   }
 
+  const navIconSx = {
+  fontSize: 40,
+  color: "rgba(255, 255, 255, 0.9)",
+  transition: "transform 0.25s ease, color 0.2s ease, opacity 0.2s ease",
+  display: "block",
+  ".nav-link:hover &": {
+    transform: "scale(1.08)",
+    color: "#fff",
+  },
+};
+
   return (
     <div className="CanvasApp">
       {!projectId && !sizeChosen && (
@@ -1019,14 +1031,9 @@ const groupSelectedObjects = () => {
           </div>
       ) : null}
       <div className="TopNavBar darkmode">
-        <button
-          type="button"
-          onClick={handleGoHome}
-          style={{ border: "none", background: "transparent", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}
-          aria-label="Вернуться в меню"
-        >
-          <img src="/Images/logo.png" alt="logo" width={50}/>
-        </button>
+        <Link className="nav-link aLink" to="/" title="Главная" aria-label="Главная" cursor="pointer">
+          <HomeRounded sx={navIconSx} />
+        </Link>
         <FileExport canvas={canvas} isReadOnly={isReadOnly} isUnsavedRef={isUnsavedRef} />
         <ZoomControl canvas={canvas} zoom={zoom} setZoom={setZoom} />
         {isReadOnly && (<div style={{ display: "flex", gap: 5, marginLeft: 10, alignItems: "center" }}>

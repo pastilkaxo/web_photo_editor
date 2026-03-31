@@ -3,6 +3,7 @@ const UserModel = require("../models/user-model");
 const ApiError = require("../Exceptions/api-error");
 const S3Service = require("../utils/s3.service");
 const CommentModel = require("../models/comment-model");
+const ContestReportModel = require("../models/contest-report-model");
 const mongoose = require("mongoose");
 const { assertContestParticipant, clientIp, deviceIdFromReq } = require("./contest-eligibility");
 const mailService = require("./mail-service");
@@ -387,10 +388,25 @@ class ProjectService {
         const project = await ProjectModel.findById(projectId);
         if (!project) throw ApiError.BadRequest("Проект не найден");
         await S3Service.deleteFile(project.s3Key);
+        await CommentModel.deleteMany({ project: projectId });
+        await ContestReportModel.deleteMany({ project: projectId });
         await UserModel.updateOne({ _id: project.owner }, { $pull: { projects: projectId }, $inc: { totalStars: -project.stars } });
         await UserModel.updateMany({favorites: projectId}, {$pull: {favorites: projectId}});
         await ProjectModel.deleteOne({ _id: projectId });
         return { message: "Проект удален администратором" };
+    }
+
+    async deleteAllProjectsByOwner(ownerId) {
+        if (!mongoose.Types.ObjectId.isValid(ownerId)) {
+            return { deletedCount: 0 };
+        }
+        const projects = await ProjectModel.find({ owner: ownerId }).select("_id").lean();
+        let deletedCount = 0;
+        for (const p of projects) {
+            await this.deleteAnyProject(p._id.toString());
+            deletedCount += 1;
+        }
+        return { deletedCount };
     }
 
 
