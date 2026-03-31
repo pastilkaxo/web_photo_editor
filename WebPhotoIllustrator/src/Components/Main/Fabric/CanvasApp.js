@@ -1204,7 +1204,7 @@ const groupSelectedObjects = () => {
             />
             <PensilTool canvas={canvas} isDrawing={isDrawing} setIsDrawing={setIsDrawing} />
             <ImageTool canvas={canvas} showImageMenu={showImageMenu} setShowImageMenu={setShowImageMenu} />
-            <PhotoFilterTool canvas={canvas} showFilterMenu={showFilterMenu} setShowFilterMenu={setShowFilterMenu} />
+            <PhotoFilterTool canvas={canvas} showFilterMenu={showFilterMenu} setShowFilterMenu={setShowFilterMenu} historyRevision={historyIndex} />
             {showCanvasSettings && (
             <CanvasSettings
               canvas={canvas}
