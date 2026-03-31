@@ -3,7 +3,7 @@ import React,{useRef,useState,useEffect,useContext,useCallback} from "react"
 import { IconButton } from "blocksin-system";
 import { Canvas, Rect, Circle, Textbox, Triangle, Group, Line, FabricImage } from "fabric";
 import { observer } from "mobx-react-lite";
-import { useParams , Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useBlocker } from "react-router-dom";
 import {
   SquareIcon, CircleIcon, TextIcon,
   LayersIcon, SlashIcon, TriangleIcon, ImageIcon, UnionIcon, IntersectIcon,
@@ -21,7 +21,7 @@ import {
   SettingsOutlined,
   Layers as LayersOutlinedIcon,
 } from "@mui/icons-material"
-import { IconButton as MuiIconButton, Tooltip, Button, Dialog, DialogContent, Typography as MuiTypography, Link as MuiLink } from "@mui/material"
+import { IconButton as MuiIconButton, Tooltip, Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography as MuiTypography, Link as MuiLink } from "@mui/material"
 
 import CanvasSettings from "./CanvasSettings";
 import Cropping from "./Cropping";
@@ -42,7 +42,6 @@ import ZoomControl from "./ZoomControl";
 import { Context } from "../../..";
 import ProjectService from "../../../Services/ProjectService";
 import ContestService from "../../../Services/ContestService";
-import { useAppDialog } from "../../../context/AppDialogContext";
 import NotFound from "../../ErrorAlerts/NotFound";
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
@@ -58,6 +57,24 @@ import {
 import { SERIALIZATION_PROPS, extendObjectWithCustomProps } from "./fabricSerialization";
 
 export { SERIALIZATION_PROPS };
+
+/** Согласовано с AppDialogContext — поверх модалок редактора. */
+const LEAVE_EDITOR_DIALOG_Z = 100_000_001;
+const leaveEditorDialogPaperSx = {
+  bgcolor: "#1e293b",
+  color: "#fff",
+  backgroundImage: "none",
+  borderRadius: 2,
+  border: "1px solid rgba(255,255,255,0.1)",
+};
+
+/** F5, Ctrl+R / ⌘+R (в т.ч. с Shift) — перезагрузка страницы. */
+function isBrowserReloadShortcut(e) {
+  if (e.key === "F5") return true;
+  const k = typeof e.key === "string" ? e.key.toLowerCase() : "";
+  if (k === "r" && (e.ctrlKey || e.metaKey) && !e.altKey) return true;
+  return false;
+}
 
 const DEFAULT_NEW_CANVAS_WIDTH = 800;
 const DEFAULT_NEW_CANVAS_HEIGHT = 600;
@@ -90,7 +107,6 @@ function CanvasApp() {
   const { id: projectId } = useParams();
   const { store } = useContext(Context);
   const navigate = useNavigate();
-  const { confirm: dialogConfirm } = useAppDialog();
 
   const canvasRef = useRef(null);
   const workspaceRef = useRef(null);
@@ -142,6 +158,8 @@ function CanvasApp() {
   const handleClose = () => setOpen(false);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [spotlightData, setSpotlightData] = useState(null);
+  const [reloadConfirmOpen, setReloadConfirmOpen] = useState(false);
+  const reloadConfirmOpenRef = useRef(false);
   const [showCanvasSettings, setShowCanvasSettings] = useState(true);
   const [showStylePanel, setShowStylePanel] = useState(true);
   const [showObjectSettings, setShowObjectSettings] = useState(true);
@@ -736,26 +754,43 @@ const groupSelectedObjects = () => {
   }, [canvas, isReadOnly]);
 
   useEffect(() => {
-    const handleBeforeUnload = (e) => {
-        if (!isReadOnlyRef.current && isUnsavedRef.current) {
-            e.preventDefault();
-            e.returnValue = '';
-        }
+    const onKeyDownCapture = (e) => {
+      if (reloadConfirmOpenRef.current) return;
+      if (isReadOnlyRef.current || !isUnsavedRef.current) return;
+      const t = e.target;
+      const tag = t?.tagName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag) || t?.isContentEditable) return;
+      if (!isBrowserReloadShortcut(e)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      reloadConfirmOpenRef.current = true;
+      setReloadConfirmOpen(true);
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []); 
+    window.addEventListener("keydown", onKeyDownCapture, true);
+    return () => window.removeEventListener("keydown", onKeyDownCapture, true);
+  }, []);
 
-  const handleGoHome = async () => {
-      if (isReadOnly || !isUnsavedRef.current) {
-        navigate("/");
-        return;
-      }
-      const ok = await dialogConfirm(
-        "У вас могут быть несохраненные изменения. Вы уверены, что хотите покинуть редактор?"
-      );
-      if (ok) navigate("/");
-  }
+  const closeReloadConfirm = useCallback(() => {
+    reloadConfirmOpenRef.current = false;
+    setReloadConfirmOpen(false);
+  }, []);
+
+  const confirmReload = useCallback(() => {
+    reloadConfirmOpenRef.current = false;
+    window.location.reload();
+  }, []);
+
+  const shouldBlockEditorLeave = useCallback(({ currentLocation, nextLocation }) => {
+    if (isReadOnlyRef.current) return false;
+    if (!isUnsavedRef.current) return false;
+    return (
+      currentLocation.pathname !== nextLocation.pathname ||
+      currentLocation.search !== nextLocation.search ||
+      currentLocation.hash !== nextLocation.hash
+    );
+  }, []);
+
+  const leaveBlocker = useBlocker(shouldBlockEditorLeave);
 
   const handleShowLayer = () => {
     showLayers ? setShowLayers(false) : setShowLayers(true);
@@ -1182,7 +1217,71 @@ const groupSelectedObjects = () => {
           </DialogContent>
         )}
       </Dialog>
-      
+
+      <Dialog
+        open={leaveBlocker.state === "blocked"}
+        onClose={() => {
+          if (leaveBlocker.state === "blocked") leaveBlocker.reset();
+        }}
+        maxWidth="xs"
+        fullWidth
+        sx={{ zIndex: LEAVE_EDITOR_DIALOG_Z }}
+        PaperProps={{ sx: leaveEditorDialogPaperSx }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, pb: 0 }}>Изменения могут не сохраниться.</DialogTitle>
+        <DialogContent sx={{ pt: 1.5 }}>
+          <MuiTypography variant="body1" sx={{ color: "rgba(255,255,255,0.88)" }}>
+            Несохранённые правки будут потеряны. Покинуть редактор?
+          </MuiTypography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            onClick={() => leaveBlocker.state === "blocked" && leaveBlocker.reset()}
+            sx={{ textTransform: "none", color: "rgba(255,255,255,0.7)" }}
+          >
+            Остаться
+          </Button>
+          <Button
+            onClick={() => leaveBlocker.state === "blocked" && leaveBlocker.proceed()}
+            variant="contained"
+            sx={{ textTransform: "none", bgcolor: "#8b5cf6", "&:hover": { bgcolor: "#7c3aed" } }}
+          >
+            Уйти
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={reloadConfirmOpen}
+        onClose={closeReloadConfirm}
+        maxWidth="xs"
+        fullWidth
+        sx={{ zIndex: LEAVE_EDITOR_DIALOG_Z + 1 }}
+        PaperProps={{ sx: leaveEditorDialogPaperSx }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, pb: 0 }}>Изменения могут не сохраниться.</DialogTitle>
+        <DialogContent sx={{ pt: 1.5 }}>
+          <MuiTypography variant="body1" sx={{ color: "rgba(255,255,255,0.88)" }}>
+            Несохранённые правки будут потеряны. Обновить страницу?
+          </MuiTypography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            onClick={closeReloadConfirm}
+            sx={{ textTransform: "none", color: "rgba(255,255,255,0.7)" }}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={confirmReload}
+            variant="contained"
+            sx={{ textTransform: "none", bgcolor: "#8b5cf6", "&:hover": { bgcolor: "#7c3aed" } }}
+          >
+            Обновить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <div className="workspace-container" ref={workspaceRef}>
         <div className="canvas-artboard-mount">
           <canvas id="canvas" ref={canvasRef} />

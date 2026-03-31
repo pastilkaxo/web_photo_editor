@@ -1,12 +1,11 @@
-import React, { useContext, useEffect } from "react"
+import React, { useContext, useEffect } from "react";
 
-import {observer} from "mobx-react-lite"
+import { observer } from "mobx-react-lite";
 import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-}
-  from "react-router-dom";
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
+} from "react-router-dom";
 
 import NotFound from "./Components/ErrorAlerts/NotFound";
 import Header from "./Components/Header/Header";
@@ -18,57 +17,84 @@ import CanvasApp from "./Components/Main/Fabric/CanvasApp";
 import Main from "./Components/Main/Main";
 import Storage from "./Components/Main/Storage/Storage";
 import HallOfFame from "./Components/Main/Storage/HallOfFame";
-import {Context} from "./index"
-import "./Styles/App.css"
+import { Context } from "./index";
+import "./Styles/App.css";
 
+const AppShell = observer(function AppShell() {
+  const { store } = useContext(Context);
+  return (
+    <div className="wrapper d-flex min-vh-100">
+      {store.isAuth && <Header />}
+      <div className="flex-grow-1">
+        <main className="main-content">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+});
 
+const StorageGate = observer(function StorageGate() {
+  const { store } = useContext(Context);
+  return store.isAuth ? <Storage /> : <Main />;
+});
 
-// import '@fontsource/inter';
+const HallOfFameGate = observer(function HallOfFameGate() {
+  const { store } = useContext(Context);
+  return store.isAuth ? <HallOfFame /> : <Main />;
+});
 
+const ProjectsGate = observer(function ProjectsGate() {
+  const { store } = useContext(Context);
+  return store.isAuth ? <ProjectsView standalone /> : <Main />;
+});
+
+const EditorWithAuthGate = observer(function EditorWithAuthGate() {
+  const { store } = useContext(Context);
+  return store.isAuth ? <CanvasApp /> : <Main />;
+});
+
+const ProfileGate = observer(function ProfileGate() {
+  const { store } = useContext(Context);
+  return store.isAuth ? <Profile /> : <Main />;
+});
+
+const ResetPasswordGate = observer(function ResetPasswordGate() {
+  const { store } = useContext(Context);
+  return store.wantToResetPassword && !store.isAuth ? <ResetForm /> : <NotFound />;
+});
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <AppShell />,
+    children: [
+      { index: true, element: <Main /> },
+      { path: "storage", element: <StorageGate /> },
+      { path: "hall-of-fame", element: <HallOfFameGate /> },
+      { path: "projects", element: <ProjectsGate /> },
+      { path: "editor", element: <CanvasApp /> },
+      { path: "editor/:id", element: <EditorWithAuthGate /> },
+      { path: "profile/:userId", element: <PublicAuthorProfile /> },
+      { path: "profile", element: <ProfileGate /> },
+      { path: "password/reset", element: <ResetPasswordGate /> },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
+]);
 
 function App() {
-
-  const {store} = useContext(Context);
+  const { store } = useContext(Context);
   useEffect(() => {
-    if(localStorage.getItem("token")){
+    if (localStorage.getItem("token")) {
       store.checkAuth();
     }
-    if(localStorage.getItem("passwordToken")){
+    if (localStorage.getItem("passwordToken")) {
       store.setWantToResetPass(true);
     }
-    
-    
-  }, []);
+  }, [store]);
 
-
-  // if (store.isLoading) {
-  //   return <p>wkfnkwf</p>
-  // }
-
-
-  return (
-    <Router>
-      <div className="wrapper d-flex min-vh-100">
-        {store.isAuth && <Header/>}
-        <div className="flex-grow-1">
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<Main  />} />
-              <Route path="/storage" element={store.isAuth ? <Storage /> : <Main />} />
-              <Route path="/hall-of-fame" element={store.isAuth ? <HallOfFame /> : <Main />} />
-              <Route path="/projects" element={store.isAuth ? <ProjectsView standalone /> : <Main />} />
-              <Route path="/editor" element={<CanvasApp />} />
-              <Route path="/editor/:id" element={store.isAuth ? <CanvasApp /> : <Main />} />
-              <Route path="/profile/:userId" element={<PublicAuthorProfile />} />
-              <Route path="/profile" element={store.isAuth ? <Profile /> : <Main />} />
-              <Route path="/password/reset" element={store.wantToResetPassword && !store.isAuth ? <ResetForm /> : <NotFound />} />
-              <Route path='*' element={<NotFound />} />
-            </Routes>
-          </main>
-        </div>
-      </div>
-    </Router>
-  )
+  return <RouterProvider router={router} />;
 }
 
 export default observer(App);
