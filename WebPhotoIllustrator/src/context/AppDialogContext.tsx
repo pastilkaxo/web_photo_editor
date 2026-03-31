@@ -37,6 +37,9 @@ export function useAppDialog(): AppDialogContextValue {
 
 type Mode = "idle" | "alert" | "confirm" | "prompt";
 
+/** Выше оверлея «Сохранить проект» в редакторе (9999) и MUI Modal редактора (1e8). */
+const APP_DIALOG_Z_INDEX = 100_000_001;
+
 export function AppDialogProvider({ children }: { children: React.ReactNode }) {
     const [mode, setMode] = useState<Mode>("idle");
     const [message, setMessage] = useState("");
@@ -128,6 +131,7 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
                 onClose={handleAlertClose}
                 maxWidth="xs"
                 fullWidth
+                sx={{ zIndex: APP_DIALOG_Z_INDEX }}
                 PaperProps={{ sx: paperSx }}
             >
                 <DialogContent sx={{ pt: 3 }}>
@@ -151,6 +155,7 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
                 onClose={() => handleConfirm(false)}
                 maxWidth="xs"
                 fullWidth
+                sx={{ zIndex: APP_DIALOG_Z_INDEX }}
                 PaperProps={{ sx: paperSx }}
             >
                 {title ? (
@@ -180,6 +185,7 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
                 onClose={handlePromptCancel}
                 maxWidth="sm"
                 fullWidth
+                sx={{ zIndex: APP_DIALOG_Z_INDEX }}
                 PaperProps={{ sx: paperSx }}
             >
                 {title ? <DialogTitle sx={{ fontWeight: 800 }}>{title}</DialogTitle> : null}
