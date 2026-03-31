@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import { Box, Button, IconButton, Modal, Typography, Stack } from '@mui/material';
+import { useAppDialog } from '../../../context/AppDialogContext';
 
 const boxSx = {
   position: 'absolute',
@@ -21,6 +22,7 @@ const boxSx = {
 export default function CanvasSizeModal({ open, onCreateFree, onCreateFromImage, onClose }) {
     const fileInputRef = useRef(null);
     const [isReadingImage, setIsReadingImage] = useState(false);
+    const { alert: dialogAlert } = useAppDialog();
 
     const handleSelectPhotoClick = () => {
       if (fileInputRef.current) {
@@ -59,7 +61,7 @@ export default function CanvasSizeModal({ open, onCreateFree, onCreateFromImage,
         });
       } catch (error) {
         console.error("Failed to read selected photo:", error);
-        alert("Не удалось прочитать изображение. Попробуйте другой файл.");
+        void dialogAlert("Не удалось прочитать изображение. Попробуйте другой файл.");
       } finally {
         setIsReadingImage(false);
         event.target.value = null;

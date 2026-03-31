@@ -178,7 +178,9 @@ class UserService {
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             throw ApiError.BadRequest("Некорректный ID пользователя");
         }
-        const user = await UserModel.findById(userId).select("firstName lastName totalStars isBlocked");
+        const user = await UserModel.findById(userId).select(
+            "firstName lastName totalStars isBlocked contestBadges goldenAvatarUntil socialLink"
+        );
         if (!user || user.isBlocked) {
             throw ApiError.BadRequest("Пользователь не найден");
         }
@@ -189,6 +191,9 @@ class UserService {
             lastName: user.lastName || "",
             displayName,
             totalStars: user.totalStars || 0,
+            contestBadges: user.contestBadges || [],
+            goldenAvatarUntil: user.goldenAvatarUntil || null,
+            socialLink: user.socialLink || "",
         };
     }
 

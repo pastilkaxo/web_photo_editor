@@ -14,6 +14,8 @@ import { SERIALIZATION_PROPS } from "./CanvasApp";
 import { styles } from "./styles";
 import { Context } from "../../../index";
 import ProjectService from "../../../Services/ProjectService";
+import ContestService from "../../../Services/ContestService";
+import { useAppDialog } from "../../../context/AppDialogContext";
 import { Box, IconButton, Typography } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import Modal from '@mui/material/Modal';
@@ -25,6 +27,7 @@ import { PROJECT_CATEGORIES, PROJECT_CATEGORY_LABELS } from "../../../constants/
 function FileExport({ canvas,isReadOnly, isUnsavedRef }) {
     const { store } = useContext(Context);
     const { id: projectId } = useParams(); 
+    const { alert: dialogAlert } = useAppDialog();
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,6 +36,9 @@ function FileExport({ canvas,isReadOnly, isUnsavedRef }) {
     const [visibility, setVisibility] = useState("PRIVATE");
     const [category, setCategory] = useState("OTHER");
     const [isSaving, setIsSaving] = useState(false);
+    const [contestStateModal, setContestStateModal] = useState(null);
+    const [submittedContestWeekId, setSubmittedContestWeekId] = useState(null);
+    const [contestBusy, setContestBusy] = useState(false);
 
     const menuRef = useRef(null);
 
@@ -90,7 +96,7 @@ function FileExport({ canvas,isReadOnly, isUnsavedRef }) {
                     console.log("Canvas loaded successfully");
                 } catch (err) {
                     console.error("Can't load canvas from json.", err);
-                    alert("Ошибка при загрузке файла");
+                    void dialogAlert("Ошибка при загрузке файла");
                 }
             }
             reader.readAsText(file);
@@ -98,9 +104,30 @@ function FileExport({ canvas,isReadOnly, isUnsavedRef }) {
         e.target.value = null;
     }
 
+    const refreshContestMeta = async (pid) => {
+        if (!pid) {
+            setContestStateModal(null);
+            setSubmittedContestWeekId(null);
+            return;
+        }
+        try {
+            const [projRes, contestRes] = await Promise.all([
+                ProjectService.getProjectById(pid),
+                ContestService.getState(),
+            ]);
+            const info = projRes.data?.info;
+            const w = info?.contestSubmission?.weekId;
+            setSubmittedContestWeekId(w ? String(w) : null);
+            setContestStateModal(contestRes.data || null);
+        } catch {
+            setContestStateModal(null);
+            setSubmittedContestWeekId(null);
+        }
+    };
+
     const handleOpenSaveDialog = async () => {
         if (!store.isAuth) {
-            alert("Войдите в аккаунт, чтобы сохранять проекты в облаке.");
+            void dialogAlert("Войдите в аккаунт, чтобы сохранять проекты в облаке.");
             setIsMenuOpen(false);
             return;
         }
@@ -115,13 +142,50 @@ function FileExport({ canvas,isReadOnly, isUnsavedRef }) {
                 // Keep current values if metadata fetch fails.
                 setProjectName((prev) => prev || "Новый проект");
             }
+            await refreshContestMeta(projectId);
         } else {
             setProjectName("Новый проект");
             setVisibility("PRIVATE");
             setCategory("OTHER");
+            setContestStateModal(null);
+            setSubmittedContestWeekId(null);
         }
         setIsModalOpen(true);
         setIsMenuOpen(false);
+    };
+
+    const handleContestFromEditor = async () => {
+        if (!projectId || contestBusy) return;
+        if (visibility !== "PUBLIC") {
+            void dialogAlert("Сделайте проект публичным, чтобы отправить на конкурс.");
+            return;
+        }
+        setContestBusy(true);
+        try {
+            await ContestService.submitToContest(projectId);
+            await dialogAlert("Работа отправлена на конкурс!");
+            await refreshContestMeta(projectId);
+        } catch (err) {
+            const msg = err.response?.data?.message || "Не удалось отправить на конкурс";
+            void dialogAlert(msg);
+        } finally {
+            setContestBusy(false);
+        }
+    };
+
+    const handleWithdrawFromEditor = async () => {
+        if (!projectId || contestBusy) return;
+        setContestBusy(true);
+        try {
+            await ContestService.withdrawFromContest(projectId);
+            await dialogAlert("Заявка на конкурс отозвана.");
+            await refreshContestMeta(projectId);
+        } catch (err) {
+            const msg = err.response?.data?.message || "Не удалось отозвать заявку";
+            void dialogAlert(msg);
+        } finally {
+            setContestBusy(false);
+        }
     };
 
     const handleConvertToPNG = () => {
@@ -164,14 +228,15 @@ function FileExport({ canvas,isReadOnly, isUnsavedRef }) {
             });
 
             if (projectId) {
-                await ProjectService.updateProject(projectId, json, visibility, previewImage, projectName, category);
+                await ProjectService.updateProject(projectId, json, visibility, previewImage, projectName, category, true);
                 if (isUnsavedRef) isUnsavedRef.current = false;
-                alert("Проект успешно обновлён!");
+                await dialogAlert("Проект успешно обновлён!");
+                await refreshContestMeta(projectId);
                 setIsModalOpen(false);
             } else {
-                await ProjectService.createProject(projectName, json, visibility, previewImage, category);
+                await ProjectService.createProjectFromEditor(projectName, json, visibility, previewImage, category);
                 if (isUnsavedRef) isUnsavedRef.current = false;
-                alert("Проект успешно сохранён!");
+                await dialogAlert("Проект успешно сохранён!");
                 setIsModalOpen(false);
             }
         } catch (err) {
@@ -180,7 +245,7 @@ function FileExport({ canvas,isReadOnly, isUnsavedRef }) {
             if (msg.includes("too large") || (err.response && err.response.status === 413)) {
                 msg = "Проект слишком большой для сохранения. Уменьшите размер изображений или попросите администратора увеличить лимит на сервере.";
             }
-            alert(msg);
+            void dialogAlert(msg);
         } finally {
             setIsSaving(false);
         }
@@ -348,7 +413,29 @@ function FileExport({ canvas,isReadOnly, isUnsavedRef }) {
                             </select>
                         </div>
 
-                        <div style={styles.modalActions}>
+                        <div style={{ ...styles.modalActions, display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", alignItems: "center" }}>
+                            {projectId && contestStateModal && contestStateModal.phase === "SUBMISSION" && (
+                                submittedContestWeekId && String(contestStateModal.weekId) === String(submittedContestWeekId) ? (
+                                    <MuiButton
+                                        variant="outlined"
+                                        onClick={handleWithdrawFromEditor}
+                                        disabled={contestBusy}
+                                        sx={{ textTransform: "none", borderColor: "rgba(248,113,113,0.7)", color: "#fca5a5" }}
+                                    >
+                                        {contestBusy ? "…" : "Отозвать с конкурса"}
+                                    </MuiButton>
+                                ) : (
+                                    <MuiButton
+                                        variant="outlined"
+                                        onClick={handleContestFromEditor}
+                                        disabled={contestBusy || visibility !== "PUBLIC"}
+                                        title={visibility !== "PUBLIC" ? "Сделайте проект публичным в этом окне" : undefined}
+                                        sx={{ textTransform: "none", borderColor: "rgba(251,191,36,0.8)", color: "#fcd34d" }}
+                                    >
+                                        {contestBusy ? "…" : "Отправить на конкурс"}
+                                    </MuiButton>
+                                )
+                            )}
                             <Button 
                                 variant="secondary" 
                                 onClick={() => setIsModalOpen(false)}

@@ -14,13 +14,29 @@ export default class UserService {
         return $api.get<IUser[]>('/admin/users');
     }
 
-    static async updateMySelf(userId: string, data: { firstName: string, lastName: string }): Promise<AxiosResponse<IUser>> {
-        return $api.put<IUser>('/update-myself', { 
+    static async updateMySelf(
+        userId: string,
+        data: {
+            firstName?: string;
+            lastName?: string;
+            socialLink?: string;
+            emailContestAnnouncements?: boolean;
+            emailFollowingAuthorPosts?: boolean;
+        }
+    ): Promise<AxiosResponse<IUser>> {
+        const updates: Record<string, unknown> = {};
+        if (data.firstName !== undefined) updates.firstName = data.firstName;
+        if (data.lastName !== undefined) updates.lastName = data.lastName;
+        if (data.socialLink !== undefined) updates.socialLink = data.socialLink;
+        if (data.emailContestAnnouncements !== undefined) {
+            updates.emailContestAnnouncements = data.emailContestAnnouncements;
+        }
+        if (data.emailFollowingAuthorPosts !== undefined) {
+            updates.emailFollowingAuthorPosts = data.emailFollowingAuthorPosts;
+        }
+        return $api.put<IUser>('/update-myself', {
             id: userId,
-            updates: {
-                firstName: data.firstName,
-                lastName: data.lastName
-            }
+            updates,
         });
     }
 

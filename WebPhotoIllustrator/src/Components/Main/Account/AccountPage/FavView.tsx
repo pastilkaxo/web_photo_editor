@@ -17,9 +17,11 @@ import { IComment } from "../../../../models/IComment";
 import { IProject } from "../../../../models/IProject";
 import { AuthorNameLink } from "../../../AuthorNameLink";
 import ProjectService from "../../../../Services/ProjectService";
+import { useAppDialog } from "../../../../context/AppDialogContext";
 
 const FavView: React.FC = () => {
     const { store } = useContext(Context);
+    const { alert: dialogAlert, prompt: dialogPrompt } = useAppDialog();
     const [projects, setProjects] = useState<IProject[]>([]);
     const [comments, setComments] = useState<IComment[]>([]);
     const [newComment, setNewComment] = useState<string>("");
@@ -66,7 +68,7 @@ const FavView: React.FC = () => {
             store.user.favorites = response.data;
             setProjects(projects.filter(p => p._id !== projectId));
         } catch (e) {
-            alert("Не удалось обновить избранное");
+            void dialogAlert("Не удалось обновить избранное");
         }
     }
 
@@ -77,7 +79,7 @@ const FavView: React.FC = () => {
             setComments([response.data, ...comments]);
             setNewComment("");
         } catch (e) {
-            alert("Не удалось отправить комментарий");
+            void dialogAlert("Не удалось отправить комментарий");
         }
     }
 
@@ -86,20 +88,25 @@ const FavView: React.FC = () => {
             await ProjectService.deleteMyComment(commentId);
             setComments(comments.filter(comment => comment._id !== commentId));
         } catch (e) {
-            alert("Не удалось удалить комментарий");
+            void dialogAlert("Не удалось удалить комментарий");
         }
     };
 
     const handleUpdateMyComment = async (commentId: string) => {
-        const updatedText = prompt("Введите новый текст комментария:");
+        const current = comments.find((c) => c._id === commentId)?.text ?? "";
+        const updatedText = await dialogPrompt("Введите новый текст комментария:", {
+            title: "Редактирование",
+            defaultValue: current,
+            multiline: true,
+        });
         if (updatedText === null || updatedText.trim() === "") return;
         try {
-            await ProjectService.updateMyComments(commentId, updatedText);
+            await ProjectService.updateMyComments(commentId, updatedText.trim());
             setComments(comments.map(comment =>
-                comment._id === commentId ? { ...comment, text: updatedText } : comment
+                comment._id === commentId ? { ...comment, text: updatedText.trim() } : comment
             ));
         } catch (e) {
-            alert("Не удалось обновить комментарий");
+            void dialogAlert("Не удалось обновить комментарий");
         }
     };
 
@@ -108,7 +115,7 @@ const FavView: React.FC = () => {
             await ProjectService.deleteAnyComment(commentId);
             setComments(comments.filter(comment => comment._id !== commentId));
         } catch (e) {
-            alert("Не удалось удалить комментарий");
+            void dialogAlert("Не удалось удалить комментарий");
         }
     };
 
@@ -122,7 +129,7 @@ const FavView: React.FC = () => {
         try {
             await ProjectService.rateProject(projectId, newValue);
         } catch (e: any) {
-            alert(`${e.response?.data?.message || "Не удалось поставить оценку"}`);
+            void dialogAlert(`${e.response?.data?.message || "Не удалось поставить оценку"}`);
         }
     };
 

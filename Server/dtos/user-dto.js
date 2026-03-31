@@ -9,6 +9,11 @@ module.exports = class UserDto{
     favorites;
     projects;
     totalStars;
+    contestBadges;
+    goldenAvatarUntil;
+    emailContestAnnouncements;
+    emailFollowingAuthorPosts;
+    socialLink;
 
     constructor(model){
         this.email = model.email;
@@ -21,5 +26,10 @@ module.exports = class UserDto{
         this.favorites = model.favorites;
         this.projects = model.projects;
         this.totalStars = model.totalStars;
+        this.contestBadges = model.contestBadges || [];
+        this.goldenAvatarUntil = model.goldenAvatarUntil || null;
+        this.emailContestAnnouncements = model.emailContestAnnouncements !== false;
+        this.emailFollowingAuthorPosts = model.emailFollowingAuthorPosts !== false;
+        this.socialLink = model.socialLink || "";
     }
 }

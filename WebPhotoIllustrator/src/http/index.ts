@@ -1,6 +1,7 @@
 import axios from "axios";
 import {config} from "dotenv";
 import {IAuthResponse} from "../models/response/AuthResponse";
+import { getOrCreateDeviceId } from "../utils/deviceId";
 
 export const API_URL = "http://localhost:5000/api";
 
@@ -11,6 +12,7 @@ const $api = axios.create({
 
 $api.interceptors.request.use(config => {
     config.headers.Authorization = `Bearer ${localStorage.getItem("token")}`;
+    config.headers["X-Device-Id"] = getOrCreateDeviceId();
     return config;
 })
 

@@ -36,6 +36,11 @@ export default function NavBar() {
 
             </Link>
           </li>
+          <li className="nav-item">
+            <Link className="nav-link text-light border-bottom" to="/hall-of-fame">
+              <p>Зал славы</p>
+            </Link>
+          </li>
         </ul>
       </div>
     </div>

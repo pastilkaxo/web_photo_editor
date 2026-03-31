@@ -18,8 +18,10 @@ import {
 
 import { IProject } from "../../../../models/IProject";
 import ProjectService from "../../../../Services/ProjectService";
+import { useAppDialog } from "../../../../context/AppDialogContext";
 
 const AdminProjectsView: React.FC = () => {
+  const { confirm: dialogConfirm } = useAppDialog();
   const [projects, setProjects] = useState<IProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,13 +43,13 @@ const AdminProjectsView: React.FC = () => {
   }, []);
 
   const handleDeleteProject = async (projectId: string) => {
-    if(window.confirm("Вы уверены, что хотите удалить этот проект?")) {
-      try {
-        await ProjectService.deleteAnyProject(projectId);
-        setProjects(prevProjects => prevProjects.filter(p => p._id !== projectId));
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Ошибка при удалении проекта");
-      }
+    const ok = await dialogConfirm("Вы уверены, что хотите удалить этот проект?");
+    if (!ok) return;
+    try {
+      await ProjectService.deleteAnyProject(projectId);
+      setProjects(prevProjects => prevProjects.filter(p => p._id !== projectId));
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Ошибка при удалении проекта");
     }
   }
 

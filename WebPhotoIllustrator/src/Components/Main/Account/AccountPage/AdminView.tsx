@@ -29,12 +29,14 @@ import {
 import { Context } from "../../../..";
 import { IUser } from "../../../../models/IUser";
 import UserService from "../../../../Services/UserService";
+import { useAppDialog } from "../../../../context/AppDialogContext";
 
 const AdminView: React.FC = () => {
     const [users, setUsers] = useState<IUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
     const {store} = useContext(Context);
+    const { alert: dialogAlert, confirm: dialogConfirm } = useAppDialog();
     const [openEditModal, setOpenEditModal] = useState(false);
     const [editingUser, setEditingUser] = useState<IUser | null>(null);
     const [firstName, setFirstName] = useState("");
@@ -72,18 +74,18 @@ const AdminView: React.FC = () => {
             }
             fetchUsers(); 
         } catch (err: any) {
-            alert(err.response?.data?.message || "Произошла ошибка");
+            void dialogAlert(err.response?.data?.message || "Произошла ошибка");
         }
     };
 
     const handleDeleteUser = async (userId: string) => {
-        if (window.confirm("Вы уверены, что хотите удалить этого пользователя?")) {
-            try {
-                await UserService.deleteUser(userId);
-                fetchUsers();
-            } catch (err: any) {
-                alert(err.response?.data?.message || "Произошла ошибка");
-            }
+        const ok = await dialogConfirm("Вы уверены, что хотите удалить этого пользователя?");
+        if (!ok) return;
+        try {
+            await UserService.deleteUser(userId);
+            fetchUsers();
+        } catch (err: any) {
+            void dialogAlert(err.response?.data?.message || "Произошла ошибка");
         }
     };
 
@@ -109,7 +111,7 @@ const AdminView: React.FC = () => {
             handleCloseEdit();
             fetchUsers();
         } catch (err: any) {
-            alert(err.response?.data?.message || "Не удалось обновить пользователя");
+            void dialogAlert(err.response?.data?.message || "Не удалось обновить пользователя");
         }
     };
 

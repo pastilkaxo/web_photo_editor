@@ -46,6 +46,7 @@ import { AuthorNameLink } from "../../../AuthorNameLink";
 import ProjectService from "../../../../Services/ProjectService";
 import { PROJECT_CATEGORIES, PROJECT_CATEGORY_LABELS, ProjectCategory } from "../../../../constants/projectCategories";
 import { buildFabricProjectPayloadFromImageFile } from "../../../../utils/buildFabricProjectFromImage";
+import { useAppDialog } from "../../../../context/AppDialogContext";
 
 const MAX_PROJECT_PHOTO_BYTES = 25 * 1024 * 1024;
 
@@ -55,6 +56,7 @@ interface ProjectsViewProps {
 
 function ProjectsView({ standalone = false }: ProjectsViewProps) {
   const { store } = useContext(Context);
+  const { alert: dialogAlert, confirm: dialogConfirm, prompt: dialogPrompt } = useAppDialog();
   const [projects, setProjects] = useState<IProject[]>([]);
   const navigate = useNavigate();
   const projectPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -98,13 +100,13 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm("Вы уверены, что хотите удалить этот проект?")) {
-      try {
-        await ProjectService.deleteProject(id);
-        setProjects(projects.filter(p => p._id !== id));
-      } catch (e) {
-        alert("Ошибка при удалении");
-      }
+    const ok = await dialogConfirm("Вы уверены, что хотите удалить этот проект?");
+    if (!ok) return;
+    try {
+      await ProjectService.deleteProject(id);
+      setProjects(projects.filter(p => p._id !== id));
+    } catch (e) {
+      void dialogAlert("Ошибка при удалении");
     }
   }
 
@@ -117,12 +119,12 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl);
-        alert("Ссылка на проект скопирована!");
+        await dialogAlert("Ссылка на проект скопирована!");
       } else {
-        window.prompt("Скопируйте ссылку:", shareUrl);
+        await dialogPrompt("Скопируйте ссылку:", { title: "Ссылка на проект", defaultValue: shareUrl });
       }
     } catch (err) {
-      window.prompt("Скопируйте ссылку:", shareUrl);
+      await dialogPrompt("Скопируйте ссылку:", { title: "Ссылка на проект", defaultValue: shareUrl });
     }
   };
 
@@ -155,7 +157,7 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
     if (!editingProject) return;
     const normalizedName = editName.trim();
     if (!normalizedName) {
-      alert("Название проекта не может быть пустым");
+      void dialogAlert("Название проекта не может быть пустым");
       return;
     }
     try {
@@ -168,19 +170,20 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
       setProjects((prev) => prev.map((project) => project._id === editingProject._id ? response.data : project));
       setEditingProject(null);
     } catch (e: any) {
-      alert(e.response?.data?.message || "Не удалось обновить проект");
+      void dialogAlert(e.response?.data?.message || "Не удалось обновить проект");
     } finally {
       setSavingMeta(false);
     }
   };
 
   const handleDeleteAnyComment = async (commentId: string) => {
-    if (!window.confirm("Удалить комментарий (Админ)?")) return;
+    const ok = await dialogConfirm("Удалить комментарий (Админ)?");
+    if (!ok) return;
     try {
       await ProjectService.deleteAnyComment(commentId);
       setComments(comments.filter(c => c._id !== commentId));
     } catch (e) {
-      alert("Ошибка при удалении");
+      void dialogAlert("Ошибка при удалении");
     }
   };
 
@@ -192,28 +195,33 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
       setComments([response.data, ...comments]);
       setNewComment("");
     } catch (e) {
-      alert("Не удалось отправить комментарий");
+      void dialogAlert("Не удалось отправить комментарий");
     }
   };
 
   const handleDeleteMyComment = async (commentId: string) => {
-    if (!window.confirm("Удалить комментарий?")) return;
+    const ok = await dialogConfirm("Удалить комментарий?");
+    if (!ok) return;
     try {
       await ProjectService.deleteMyComment(commentId);
       setComments(comments.filter(c => c._id !== commentId));
     } catch (e) {
-      alert("Ошибка при удалении");
+      void dialogAlert("Ошибка при удалении");
     }
   };
 
   const handleUpdateMyComment = async (commentId: string) => {
-    const text = prompt("Изменить комментарий:", comments.find(c => c._id === commentId)?.text);
+    const text = await dialogPrompt("Изменить комментарий:", {
+      title: "Редактирование",
+      defaultValue: comments.find(c => c._id === commentId)?.text ?? "",
+      multiline: true,
+    });
     if (!text || text.trim() === "") return;
     try {
-      await ProjectService.updateMyComments(commentId, text);
-      setComments(comments.map(c => c._id === commentId ? { ...c, text } : c));
+      await ProjectService.updateMyComments(commentId, text.trim());
+      setComments(comments.map(c => c._id === commentId ? { ...c, text: text.trim() } : c));
     } catch (e) {
-      alert("Ошибка при обновлении");
+      void dialogAlert("Ошибка при обновлении");
     }
   };
 
@@ -227,11 +235,11 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
     event.target.value = "";
     if (!file) return;
     if (!store.isAuth) {
-      alert("Войдите в аккаунт, чтобы загрузить фото.");
+      void dialogAlert("Войдите в аккаунт, чтобы загрузить фото.");
       return;
     }
     if (file.size > MAX_PROJECT_PHOTO_BYTES) {
-      alert("Файл слишком большой. Максимум 25 МБ.");
+      void dialogAlert("Файл слишком большой. Максимум 25 МБ.");
       return;
     }
     setUploadingPhoto(true);
@@ -251,7 +259,7 @@ function ProjectsView({ standalone = false }: ProjectsViewProps) {
         e?.message ||
         e?.response?.data?.message ||
         "Не удалось загрузить фото. Попробуйте другой файл.";
-      alert(msg);
+      void dialogAlert(msg);
     } finally {
       setUploadingPhoto(false);
     }

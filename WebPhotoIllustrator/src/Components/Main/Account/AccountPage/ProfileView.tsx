@@ -13,7 +13,9 @@ import {
   DialogActions,
   Paper,
   Stack,
-  Chip
+  Chip,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import localforage from "localforage";
 import { observer } from "mobx-react-lite";
@@ -24,12 +26,18 @@ import MobileStack from "./MUI/MobileStack";
 import { Context } from "../../../../index";
 import { IUser } from "../../../../models/IUser";
 import UserService from "../../../../Services/UserService";
+import { contestBadgeLabel } from "../../../../utils/contestLabels";
+import { useAppDialog } from "../../../../context/AppDialogContext";
 
 function ProfileView() {
   const { store } = useContext(Context);
+  const { alert: dialogAlert } = useAppDialog();
   const [openEditModal, setOpenEditModal] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [socialLink, setSocialLink] = useState("");
+  const [emailContestAnnouncements, setEmailContestAnnouncements] = useState(true);
+  const [emailFollowingAuthorPosts, setEmailFollowingAuthorPosts] = useState(true);
   const currentUserId = store.user.id;
 
 
@@ -49,7 +57,13 @@ function ProfileView() {
     if (!store.user) return;
     const currentUserId = store.user.id;
     try {
-      const response = await UserService.updateMySelf(currentUserId, { firstName, lastName });
+      const response = await UserService.updateMySelf(currentUserId, {
+        firstName,
+        lastName,
+        socialLink: socialLink.trim(),
+        emailContestAnnouncements,
+        emailFollowingAuthorPosts,
+      });
       const updatedUser = {
         ...response.data,
         id: response.data.id || response.data._id || currentUserId,
@@ -61,13 +75,16 @@ function ProfileView() {
       await localforage.setItem(`lastName_${currentUserId}`, updatedUser.lastName || "");
       handleCloseEdit();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Не удалось обновить пользователя");
+      void dialogAlert(err.response?.data?.message || "Не удалось обновить пользователя");
     }
   };
 
   const handleOpenEdit = (user: IUser) => {
     setFirstName(user.firstName || "");
     setLastName(user.lastName || "");
+    setSocialLink(user.socialLink || "");
+    setEmailContestAnnouncements(user.emailContestAnnouncements !== false);
+    setEmailFollowingAuthorPosts(user.emailFollowingAuthorPosts !== false);
     setOpenEditModal(true);
   };
 
@@ -75,6 +92,9 @@ function ProfileView() {
     setOpenEditModal(false);
     setFirstName("");
     setLastName("");
+    setSocialLink("");
+    setEmailContestAnnouncements(true);
+    setEmailFollowingAuthorPosts(true);
   };
 
   return (
@@ -98,6 +118,19 @@ function ProfileView() {
               }}
             />
           </Box>
+
+          {store.user.contestBadges && store.user.contestBadges.length > 0 && (
+            <Stack direction="row" flexWrap="wrap" gap={1}>
+              {store.user.contestBadges.map((b, i) => (
+                <Chip
+                  key={`${b.kind}-${b.weekIndex}-${i}`}
+                  label={contestBadgeLabel(b.kind, b.weekIndex)}
+                  size="small"
+                  sx={{ bgcolor: "rgba(251,191,36,0.12)", color: "#fcd34d", border: "1px solid rgba(251,191,36,0.3)" }}
+                />
+              ))}
+            </Stack>
+          )}
 
           <DesktopStack
             firstName={firstName}
@@ -163,6 +196,40 @@ function ProfileView() {
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               sx={{ "& .MuiOutlinedInput-root": { color: "#fff", bgcolor: "rgba(255,255,255,0.05)" }, "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.6)" } }}
+            />
+            <TextField
+              label="Ссылка на соцсети (для страницы победителя)"
+              fullWidth
+              variant="outlined"
+              size="small"
+              value={socialLink}
+              onChange={(e) => setSocialLink(e.target.value)}
+              placeholder="https://..."
+              sx={{ "& .MuiOutlinedInput-root": { color: "#fff", bgcolor: "rgba(255,255,255,0.05)" }, "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.6)" } }}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={emailContestAnnouncements}
+                  onChange={(_, v) => setEmailContestAnnouncements(v)}
+                  color="secondary"
+                />
+              }
+              label={<Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>Письма о старте недельного конкурса</Typography>}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={emailFollowingAuthorPosts}
+                  onChange={(_, v) => setEmailFollowingAuthorPosts(v)}
+                  color="secondary"
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
+                  Письма о новых публичных работах авторов, на которых вы подписаны
+                </Typography>
+              }
             />
           </Box>
         </DialogContent>

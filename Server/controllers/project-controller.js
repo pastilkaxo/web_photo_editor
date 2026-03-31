@@ -3,8 +3,8 @@ const projectService = require('../service/project-service');
 class ProjectController {
         async create(req, res, next) {
         try {
-             const { name, json, visibility, previewImage, category } = req.body;
-            const project = await projectService.createProject(req.user.id, name, json, visibility, previewImage, category);
+             const { name, json, visibility, previewImage, category, savedFromEditor } = req.body;
+            const project = await projectService.createProject(req.user.id, name, json, visibility, previewImage, category, !!savedFromEditor);
             return res.json(project);
         } catch (e) {
             next(e);
@@ -33,8 +33,8 @@ class ProjectController {
     async update(req, res, next) {
         try {
              const { id } = req.params;
-             const { json, visibility, previewImage, name, category } = req.body;
-             const project = await projectService.updateProject(id, req.user.id, json, visibility, previewImage, name, category);
+             const { json, visibility, previewImage, name, category, savedFromEditor } = req.body;
+             const project = await projectService.updateProject(id, req.user.id, json, visibility, previewImage, name, category, !!savedFromEditor);
              return res.json(project);
         } catch (e) {
             next(e);
@@ -74,7 +74,7 @@ class ProjectController {
         try {
             const { projectId } = req.params;
             const { stars } = req.body;
-            await projectService.rateProject(projectId, req.user.id, stars);
+            await projectService.rateProject(projectId, req.user.id, stars, req);
             return res.json({ message: "Рейтинг обновлен" });
         } catch (e) {
             next(e);

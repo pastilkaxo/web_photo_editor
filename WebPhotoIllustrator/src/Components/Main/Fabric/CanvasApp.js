@@ -21,7 +21,7 @@ import {
   SettingsOutlined,
   Layers as LayersOutlinedIcon,
 } from "@mui/icons-material"
-import { IconButton as MuiIconButton, Tooltip, Button } from "@mui/material"
+import { IconButton as MuiIconButton, Tooltip, Button, Dialog, DialogContent, Typography as MuiTypography, Link as MuiLink } from "@mui/material"
 
 import CanvasSettings from "./CanvasSettings";
 import Cropping from "./Cropping";
@@ -41,6 +41,8 @@ import Video from "./Video";
 import ZoomControl from "./ZoomControl";
 import { Context } from "../../..";
 import ProjectService from "../../../Services/ProjectService";
+import ContestService from "../../../Services/ContestService";
+import { useAppDialog } from "../../../context/AppDialogContext";
 import NotFound from "../../ErrorAlerts/NotFound";
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
@@ -87,6 +89,7 @@ function CanvasApp() {
   const { id: projectId } = useParams();
   const { store } = useContext(Context);
   const navigate = useNavigate();
+  const { confirm: dialogConfirm } = useAppDialog();
 
   const canvasRef = useRef(null);
   const workspaceRef = useRef(null);
@@ -136,6 +139,8 @@ function CanvasApp() {
 
   const [open, setOpen] = React.useState(false);
   const handleClose = () => setOpen(false);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
+  const [spotlightData, setSpotlightData] = useState(null);
   const [showCanvasSettings, setShowCanvasSettings] = useState(true);
   const [showStylePanel, setShowStylePanel] = useState(true);
   const [showObjectSettings, setShowObjectSettings] = useState(true);
@@ -740,11 +745,15 @@ const groupSelectedObjects = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []); 
 
-  const handleGoHome = () => {
-      if(!isReadOnly && isUnsavedRef.current && !window.confirm("У вас могут быть несохраненные изменения. Вы уверены, что хотите покинуть редактор?")) {
-          return;
+  const handleGoHome = async () => {
+      if (isReadOnly || !isUnsavedRef.current) {
+        navigate("/");
+        return;
       }
-      navigate("/");
+      const ok = await dialogConfirm(
+        "У вас могут быть несохраненные изменения. Вы уверены, что хотите покинуть редактор?"
+      );
+      if (ok) navigate("/");
   }
 
   const handleShowLayer = () => {
@@ -925,15 +934,29 @@ const groupSelectedObjects = () => {
     setRefreshKey((prevKey) => prevKey + 1);
   }
 
-  if(isNotFound) {
-      return <NotFound />;
-  }
-
   useEffect(() => {
     if (!store.isAuth && !projectId) {
       setOpen(true);
     }
   },[store.isAuth,projectId]);
+
+  useEffect(() => {
+    if (!projectId || !store.isAuth) return;
+    const key = "wi_contest_spotlight_seen";
+    if (sessionStorage.getItem(key)) return;
+    ContestService.getSpotlight()
+      .then((res) => {
+        if (res.data?.previewImage) {
+          setSpotlightData(res.data);
+          setSpotlightOpen(true);
+        }
+      })
+      .catch(() => {});
+  }, [projectId, store.isAuth]);
+
+  if(isNotFound) {
+      return <NotFound />;
+  }
 
   return (
     <div className="CanvasApp">
@@ -1096,6 +1119,62 @@ const groupSelectedObjects = () => {
         </div>
       </div>
       {!isReadOnly && <FabricAssist canvas={canvas}/>}
+
+      <Dialog
+        open={spotlightOpen && !!spotlightData}
+        onClose={() => {
+          sessionStorage.setItem("wi_contest_spotlight_seen", "1");
+          setSpotlightOpen(false);
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: "#0f172a",
+            border: "1px solid rgba(251,191,36,0.35)",
+            borderRadius: 3,
+          },
+        }}
+      >
+        {spotlightData && (
+          <DialogContent sx={{ p: 3 }}>
+            <MuiTypography variant="overline" sx={{ color: "rgba(251,191,36,0.9)" }}>
+              Победитель недели #{spotlightData.weekIndex}
+            </MuiTypography>
+            <MuiTypography variant="h6" sx={{ color: "#fff", fontWeight: 800, mb: 1 }}>
+              {spotlightData.theme}
+            </MuiTypography>
+            <Box
+              component="img"
+              src={spotlightData.previewImage}
+              alt={spotlightData.projectName}
+              sx={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 2, bgcolor: "#000" }}
+            />
+            <MuiTypography variant="body2" sx={{ color: "rgba(255,255,255,0.75)", mt: 2 }}>
+              {spotlightData.projectName}
+            </MuiTypography>
+            <MuiTypography variant="body2" sx={{ color: "#a78bfa", fontWeight: 700 }}>
+              {spotlightData.ownerDisplayName}
+            </MuiTypography>
+            {spotlightData.socialLink ? (
+              <MuiLink href={spotlightData.socialLink} target="_blank" rel="noopener noreferrer" sx={{ display: "block", mt: 1 }}>
+                Ссылка на соцсети автора
+              </MuiLink>
+            ) : null}
+            <Button
+              fullWidth
+              variant="contained"
+              sx={{ mt: 2, textTransform: "none", fontWeight: 700 }}
+              onClick={() => {
+                sessionStorage.setItem("wi_contest_spotlight_seen", "1");
+                setSpotlightOpen(false);
+              }}
+            >
+              В редактор
+            </Button>
+          </DialogContent>
+        )}
+      </Dialog>
       
       <div className="workspace-container" ref={workspaceRef}>
         <div className="canvas-artboard-mount">

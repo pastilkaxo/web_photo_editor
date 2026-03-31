@@ -2,13 +2,16 @@ import React from "react"
 import { Box, Typography, Stack, TextField, Button, Switch, FormControlLabel, Divider } from "@mui/material"
 import { observer } from "mobx-react-lite"
 
+import { useAppDialog } from "../../../../context/AppDialogContext";
+
 function SecurityView() {
+  const { alert: dialogAlert } = useAppDialog();
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
   const [twoFactor, setTwoFactor] = React.useState(false);
 
   const handleUpdatePassword = () => {
-    alert("Эта функция будет доступна в следующем обновлении!");
+    void dialogAlert("Эта функция будет доступна в следующем обновлении!");
   };
 
   return (
@@ -129,7 +132,7 @@ function SecurityView() {
                 variant="outlined" 
                 color="error" 
                 sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2 }}
-                onClick={() => alert("Система защиты подтверждения: это действие заблокировано!")}
+                onClick={() => void dialogAlert("Система защиты подтверждения: это действие заблокировано!")}
               >
                 Удалить аккаунт
               </Button>

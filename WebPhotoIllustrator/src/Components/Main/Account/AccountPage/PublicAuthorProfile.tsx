@@ -18,6 +18,7 @@ import {
   Paper,
   Stack,
   Typography,
+  Chip,
 } from "@mui/material";
 import { observer } from "mobx-react-lite";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -27,12 +28,16 @@ import { IProject } from "../../../../models/IProject";
 import { IPublicUserProfile } from "../../../../models/IPublicUserProfile";
 import ProjectService from "../../../../Services/ProjectService";
 import UserService from "../../../../Services/UserService";
+import ContestService from "../../../../Services/ContestService";
 import { PROJECT_CATEGORY_LABELS, ProjectCategory } from "../../../../constants/projectCategories";
+import { contestBadgeLabel } from "../../../../utils/contestLabels";
+import { useAppDialog } from "../../../../context/AppDialogContext";
 
 const PublicAuthorProfile: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { store } = useContext(Context);
+  const { alert: dialogAlert } = useAppDialog();
 
   const [profile, setProfile] = useState<IPublicUserProfile | null>(null);
   const [projects, setProjects] = useState<IProject[]>([]);
@@ -41,6 +46,7 @@ const PublicAuthorProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [following, setFollowing] = useState(false);
 
   const selfId = store.user?.id ?? store.user?._id;
 
@@ -67,6 +73,23 @@ const PublicAuthorProfile: React.FC = () => {
     };
     loadProfile();
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId || !store.isAuth || selfId == null || userId === String(selfId)) return;
+    ContestService.followStatus(userId)
+      .then((r) => setFollowing(!!r.data.following))
+      .catch(() => setFollowing(false));
+  }, [userId, store.isAuth, selfId]);
+
+  const handleToggleFollow = async () => {
+    if (!userId) return;
+    try {
+      const r = await ContestService.toggleFollow(userId);
+      setFollowing(!!r.data.following);
+    } catch (e: any) {
+      void dialogAlert(e?.response?.data?.message || "Не удалось изменить подписку");
+    }
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -153,6 +176,39 @@ const PublicAuthorProfile: React.FC = () => {
                     Суммарный рейтинг работ: <strong style={{ color: "#fff" }}>{profile.totalStars}</strong>
                   </Typography>
                 </Stack>
+                {store.isAuth && selfId != null && userId !== String(selfId) && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleToggleFollow}
+                    sx={{ mt: 1, alignSelf: "flex-start", textTransform: "none", borderColor: "rgba(167,139,250,0.5)", color: "#e9d5ff" }}
+                  >
+                    {following ? "Отписаться от автора" : "Подписаться на автора"}
+                  </Button>
+                )}
+                {profile.socialLink ? (
+                  <Button
+                    href={profile.socialLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    size="small"
+                    sx={{ mt: 1, alignSelf: "flex-start", textTransform: "none", color: "#67e8f9" }}
+                  >
+                    Соцсети автора
+                  </Button>
+                ) : null}
+                {profile.contestBadges && profile.contestBadges.length > 0 && (
+                  <Stack direction="row" flexWrap="wrap" gap={1} sx={{ pt: 1 }}>
+                    {profile.contestBadges.map((b, i) => (
+                      <Chip
+                        key={`${b.kind}-${b.weekIndex}-${i}`}
+                        label={contestBadgeLabel(b.kind, b.weekIndex)}
+                        size="small"
+                        sx={{ bgcolor: "rgba(251,191,36,0.15)", color: "#fcd34d", border: "1px solid rgba(251,191,36,0.35)" }}
+                      />
+                    ))}
+                  </Stack>
+                )}
                 <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.45)", pt: 0.5 }}>
                   Публичные работы автора
                 </Typography>

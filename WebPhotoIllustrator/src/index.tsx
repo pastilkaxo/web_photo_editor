@@ -6,7 +6,8 @@ import ReactDOM from "react-dom/client";
 
 import "./index.css";
 import App from "./App";
-import Store from "../src/Store/store"
+import Store from "../src/Store/store";
+import { AppDialogProvider } from "./context/AppDialogContext";
 
 interface IStore {
     store: Store;
@@ -27,7 +28,9 @@ root.render(
   <React.StrictMode>
     <GoogleOAuthProvider clientId={CLIENT_ID}>
       <Context.Provider value={{store}}>
-        <App />
+        <AppDialogProvider>
+          <App />
+        </AppDialogProvider>
       </Context.Provider>
     </GoogleOAuthProvider>
   </React.StrictMode>

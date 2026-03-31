@@ -1,3 +1,10 @@
+export interface IContestBadge {
+    kind: string;
+    weekIndex: number;
+    theme?: string;
+    awardedAt?: string;
+}
+
 export interface IUser {
      _id: string;
     email: string;
@@ -10,4 +17,10 @@ export interface IUser {
     favorites: string[];
     id: string;
     totalStars: number;
+    contestBadges?: IContestBadge[];
+    goldenAvatarUntil?: string | null;
+    socialLink?: string;
+    emailContestAnnouncements?: boolean;
+    /** Письма о новых публичных работах подписанных авторов */
+    emailFollowingAuthorPosts?: boolean;
 }

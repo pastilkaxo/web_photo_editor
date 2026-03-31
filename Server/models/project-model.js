@@ -21,7 +21,21 @@ const ProjectSchema = new Schema({
     previewImage: { type: String, default: '' },
     stars: { type: Number, default: 0 }, 
     ratedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    /** Детальные голоса 1–5 (средний балл для конкурса) */
+    starVotes: [{
+        user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        stars: { type: Number, required: true, min: 1, max: 5 },
+        ip: { type: String, default: '' },
+        deviceId: { type: String, default: '' },
+        at: { type: Date, default: Date.now },
+    }],
     comments:[{type: Schema.Types.ObjectId, ref: 'Comment'}],
+    lastSavedFromEditorAt: { type: Date, default: null },
+    contestSubmission: {
+        weekId: { type: Schema.Types.ObjectId, ref: 'ContestWeek', default: null },
+        submittedAt: { type: Date, default: null },
+    },
+    contestReportsCount: { type: Number, default: 0 },
 });
 
 module.exports = model('Project', ProjectSchema);

@@ -4,10 +4,22 @@ const ApiError = require("../Exceptions/api-error");
 const S3Service = require("../utils/s3.service");
 const CommentModel = require("../models/comment-model");
 const mongoose = require("mongoose");
+const { assertContestParticipant, clientIp, deviceIdFromReq } = require("./contest-eligibility");
+const mailService = require("./mail-service");
+
+function scheduleNotifyFollowersNewPublicProject(ownerId, project) {
+    setImmediate(() => {
+        mailService
+            .notifyFollowersNewPublicProject(ownerId, project)
+            .catch((e) =>
+                console.error("notifyFollowersNewPublicProject:", e.message)
+            );
+    });
+}
 
 class ProjectService {
 
-    async createProject(userId, projectName, projectData, visibility = 'PRIVATE', previewImage, category = 'OTHER') {
+    async createProject(userId, projectName, projectData, visibility = 'PRIVATE', previewImage, category = 'OTHER', savedFromEditor = false) {
         const fileName = `${projectName}_${Date.now()}.json`;
         const s3Key = await S3Service.uploadJson(userId, projectData, fileName);
         const user = await UserModel.findById(userId);
@@ -18,11 +30,16 @@ class ProjectService {
             ownerName: user.firstName + " " + user.lastName,
             visibility,
             previewImage,
-            category
+            category,
+            lastSavedFromEditorAt: savedFromEditor ? new Date() : undefined,
         });
         if (user) {
             user.projects.push(project._id);
             await user.save();
+        }
+
+        if (visibility === "PUBLIC") {
+            scheduleNotifyFollowersNewPublicProject(userId, project);
         }
 
         return project;
@@ -78,14 +95,18 @@ class ProjectService {
         return { message: "Проект удален" };
     }
 
-    async updateProject(projectId, userId, projectJson, visibility, previewImage, name, category) {
+    async updateProject(projectId, userId, projectJson, visibility, previewImage, name, category, savedFromEditor) {
         const project = await ProjectModel.findById(projectId);
         if (!project) throw ApiError.BadRequest("Проект не найден");
         
         if (project.owner.toString() !== userId) {
              throw ApiError.Forbidden("Вы не являетесь владельцем этого проекта");
         }
+        const wasPublic = project.visibility === "PUBLIC";
         await S3Service.uploadJson(userId, projectJson, project.s3Key);
+        if (savedFromEditor) {
+            project.lastSavedFromEditorAt = new Date();
+        }
             
         if (visibility) {
             project.visibility = visibility;
@@ -102,6 +123,9 @@ class ProjectService {
         if (previewImage) project.previewImage = previewImage;
         project.updatedAt = new Date();
         await project.save();
+        if (project.visibility === "PUBLIC" && !wasPublic) {
+            scheduleNotifyFollowersNewPublicProject(userId, project);
+        }
         return project;
     }
 
@@ -112,6 +136,7 @@ class ProjectService {
             throw ApiError.Forbidden("Вы не являетесь владельцем этого проекта");
         }
 
+        const wasPublic = project.visibility === "PUBLIC";
         const { name, visibility, category } = payload || {};
 
         if (typeof name === "string" && name.trim()) {
@@ -133,6 +158,9 @@ class ProjectService {
 
         project.updatedAt = new Date();
         await project.save();
+        if (project.visibility === "PUBLIC" && !wasPublic) {
+            scheduleNotifyFollowersNewPublicProject(userId, project);
+        }
         return project;
     }
 
@@ -144,7 +172,9 @@ class ProjectService {
             category,
             owner,
             sortBy = "createdAt",
-            sortOrder = "desc"
+            sortOrder = "desc",
+            contestWeekId,
+            prioritizeContest,
         } = filters;
 
         const normalizedPage = Math.max(parseInt(page, 10) || 1, 1);
@@ -161,16 +191,56 @@ class ProjectService {
         if (owner && mongoose.Types.ObjectId.isValid(owner)) {
             query.owner = owner;
         }
+        if (contestWeekId && mongoose.Types.ObjectId.isValid(contestWeekId)) {
+            query["contestSubmission.weekId"] = contestWeekId;
+        }
 
         const allowedSortFields = ["createdAt", "updatedAt", "stars", "name"];
         const normalizedSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
         const normalizedSortOrder = sortOrder === "asc" ? 1 : -1;
-        const sort = { [normalizedSortBy]: normalizedSortOrder };
+        let sort = { [normalizedSortBy]: normalizedSortOrder };
 
-        const [projects, total] = await Promise.all([
-            ProjectModel.find(query).sort(sort).skip(skip).limit(normalizedLimit),
-            ProjectModel.countDocuments(query)
-        ]);
+        const isWeekendBoost =
+            prioritizeContest === "true" ||
+            prioritizeContest === true;
+        let projects;
+        let total;
+        if (isWeekendBoost) {
+            const sortStage = {
+                _contestSort: -1,
+                [normalizedSortBy]: normalizedSortOrder,
+            };
+            const pipeline = [
+                { $match: query },
+                {
+                    $addFields: {
+                        _contestSort: {
+                            $cond: {
+                                if: { $ne: ["$contestSubmission.weekId", null] },
+                                then: 1,
+                                else: 0,
+                            },
+                        },
+                    },
+                },
+                { $sort: sortStage },
+                { $skip: skip },
+                { $limit: normalizedLimit },
+                { $project: { _contestSort: 0 } },
+            ];
+            const countPipeline = [{ $match: query }, { $count: "total" }];
+            const [agg, countRes] = await Promise.all([
+                ProjectModel.aggregate(pipeline),
+                ProjectModel.aggregate(countPipeline),
+            ]);
+            projects = agg;
+            total = countRes[0]?.total || 0;
+        } else {
+            [projects, total] = await Promise.all([
+                ProjectModel.find(query).sort(sort).skip(skip).limit(normalizedLimit),
+                ProjectModel.countDocuments(query),
+            ]);
+        }
 
         return {
             items: projects,
@@ -181,21 +251,64 @@ class ProjectService {
         };
     }
 
-    async rateProject(projectId, userId, stars) {
+    async rateProject(projectId, userId, stars, req) {
+        const voter = await UserModel.findById(userId);
+        if (!voter) throw ApiError.BadRequest("Пользователь не найден");
+        assertContestParticipant(voter);
+
+        const nStars = Number(stars);
+        if (!Number.isFinite(nStars) || nStars < 1 || nStars > 5) {
+            throw ApiError.BadRequest("Оценка от 1 до 5 звёзд");
+        }
+
+        const ip = clientIp(req);
+        const deviceId = deviceIdFromReq(req);
+        if (!deviceId) {
+            throw ApiError.BadRequest("Укажите идентификатор устройства (deviceId) для защиты от накруток");
+        }
+
         const project = await ProjectModel.findById(projectId);
         if (!project) throw ApiError.BadRequest("Проект не найден");
         if (project.owner.toString() === userId) {
             throw ApiError.BadRequest("Нельзя оценивать свои работы");
         }
-        if(project.ratedBy.includes(userId)) {
+        const uidStr = userId.toString();
+        if (project.ratedBy.some((id) => id.toString() === uidStr)) {
             throw ApiError.BadRequest("Вы уже оценили этот проект");
         }
-        project.stars += stars;
+        project.starVotes = project.starVotes || [];
+        if (project.starVotes.some((v) => v.user.toString() === uidStr)) {
+            throw ApiError.BadRequest("Вы уже оценили этот проект");
+        }
+
+        if (ip) {
+            const ipTaken = project.starVotes.some(
+                (v) => v.ip === ip && v.user.toString() !== uidStr
+            );
+            if (ipTaken) {
+                throw ApiError.BadRequest("С этого IP уже голосовали за эту работу");
+            }
+        }
+        const devTaken = project.starVotes.some(
+            (v) => v.deviceId === deviceId && v.user.toString() !== uidStr
+        );
+        if (devTaken) {
+            throw ApiError.BadRequest("С этого устройства уже голосовали за эту работу");
+        }
+
+        project.stars += nStars;
         project.ratedBy.push(userId);
+        project.starVotes.push({
+            user: userId,
+            stars: nStars,
+            ip: ip || "",
+            deviceId,
+            at: new Date(),
+        });
         await project.save();
         const owner = await UserModel.findById(project.owner);
         if (owner) {
-            owner.totalStars += stars;
+            owner.totalStars += nStars;
             await owner.save();
         }
     }
@@ -214,12 +327,16 @@ class ProjectService {
     }
     
     async addComment(projectId, userId, text) {
+        const author = await UserModel.findById(userId);
+        if (!author) throw ApiError.BadRequest("Пользователь не найден");
+        assertContestParticipant(author);
+
         const comment = await CommentModel.create({ text, author: userId, project: projectId });
         const project = await ProjectModel.findById(projectId);
         if (!project) throw ApiError.BadRequest("Проект не найден");
         project.comments.push(comment._id);
         await project.save();
-        return await comment.populate('author', 'email');
+        return await comment.populate("author", "email firstName lastName goldenAvatarUntil contestBadges");
     }
 
     async deleteMyComment(commentId, userId) { 
@@ -241,11 +358,13 @@ class ProjectService {
         }
         comment.text = text;
         await comment.save();
-        return await comment.populate('author', 'email');
+        return await comment.populate("author", "email firstName lastName goldenAvatarUntil contestBadges");
     }
     
     async getProjectComments(projectId) { 
-        return await CommentModel.find({ project: projectId }).populate('author', 'email').sort({ createdAt: -1 });
+        return await CommentModel.find({ project: projectId })
+            .populate("author", "email firstName lastName goldenAvatarUntil contestBadges")
+            .sort({ createdAt: -1 });
     }
 
 

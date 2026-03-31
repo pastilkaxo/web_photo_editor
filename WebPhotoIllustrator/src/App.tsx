@@ -17,6 +17,7 @@ import ResetForm from "./Components/Main/AuthForm/ResetForm";
 import CanvasApp from "./Components/Main/Fabric/CanvasApp";
 import Main from "./Components/Main/Main";
 import Storage from "./Components/Main/Storage/Storage";
+import HallOfFame from "./Components/Main/Storage/HallOfFame";
 import {Context} from "./index"
 import "./Styles/App.css"
 
@@ -54,6 +55,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Main  />} />
               <Route path="/storage" element={store.isAuth ? <Storage /> : <Main />} />
+              <Route path="/hall-of-fame" element={store.isAuth ? <HallOfFame /> : <Main />} />
               <Route path="/projects" element={store.isAuth ? <ProjectsView standalone /> : <Main />} />
               <Route path="/editor" element={<CanvasApp />} />
               <Route path="/editor/:id" element={store.isAuth ? <CanvasApp /> : <Main />} />

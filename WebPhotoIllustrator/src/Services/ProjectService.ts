@@ -14,6 +14,8 @@ export interface IPublicProjectsQuery {
     owner?: string;
     sortBy?: "createdAt" | "updatedAt" | "stars" | "name";
     sortOrder?: "asc" | "desc";
+    contestWeekId?: string;
+    prioritizeContest?: boolean | string;
 }
 
 export interface IPublicProjectsResponse {
@@ -32,7 +34,31 @@ export default class ProjectService {
         previewImage?: string,
         category: ProjectCategory = "OTHER"
     ): Promise<AxiosResponse<IProject>> {
-        return $api.post<IProject>("/projects", { name, json, visibility, previewImage, category });
+        return $api.post<IProject>("/projects", {
+            name,
+            json,
+            visibility,
+            previewImage,
+            category,
+            savedFromEditor: false,
+        });
+    }
+
+    static async createProjectFromEditor(
+        name: string,
+        json: object,
+        visibility = "PRIVATE",
+        previewImage?: string,
+        category: ProjectCategory = "OTHER"
+    ): Promise<AxiosResponse<IProject>> {
+        return $api.post<IProject>("/projects", {
+            name,
+            json,
+            visibility,
+            previewImage,
+            category,
+            savedFromEditor: true,
+        });
     }
 
     static async fetchMyProjects(): Promise<AxiosResponse<IProject[]>> {
@@ -57,9 +83,17 @@ export default class ProjectService {
         visibility?: string,
         previewImage?: string,
         name?: string,
-        category?: ProjectCategory
+        category?: ProjectCategory,
+        savedFromEditor?: boolean
     ): Promise<AxiosResponse<IProject>> {
-        return $api.put<IProject>(`/projects/${id}`, { json, visibility, previewImage, name, category });
+        return $api.put<IProject>(`/projects/${id}`, {
+            json,
+            visibility,
+            previewImage,
+            name,
+            category,
+            savedFromEditor: !!savedFromEditor,
+        });
     }
 
     static async updateProjectMeta(

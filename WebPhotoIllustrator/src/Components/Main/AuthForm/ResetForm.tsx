@@ -58,7 +58,6 @@ function ResetForm() {
           setSnackbarSeverity("success");
           setSnackbarMessage(response.message ?? "Пароль успешно изменен! Перенаправление...");
           setOpenSnackbar(true);
-          alert("Пароль изменен!")
           navigator("/");
           localStorage.removeItem("passwordToken");
           store.setWantToResetPass(false);
